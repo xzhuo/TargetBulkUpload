@@ -4,7 +4,7 @@ import urllib.request
 import urllib.error
 import json
 import argparse
-# import ipdb  #  for debug
+# import ipdb  # for debug
 
 my_token = 'tokenstring'
 bearer_token = 'bearer ' + my_token
