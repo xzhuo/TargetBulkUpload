@@ -1,7 +1,7 @@
 # TargetBulkUpload
 Bulk upload data to target dcc
 
-## prepare library
+## prepare library (if necessary)
 ```
 pip3 install xlrd
 ```
