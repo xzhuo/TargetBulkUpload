@@ -19,7 +19,7 @@ def get_args():
         action="store",
         dest="tem",
         choices=['V1', 'V2', 'CSV'],
-        help='The different version of template, CSV is not supported yet. V1 is the original template with all data in a single sheet. V2 seperated different tables to different sheet in excel (recommended).',
+        help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet. V2 seperated different tables to different sheets in excel (recommended).',
     )
     parser.add_argument(
         '--excel',
