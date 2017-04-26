@@ -12,5 +12,5 @@ pip3 install xlrd
 3. Fill in the excel template.
 4. Run it with command:
 ```
-python3 -t V2 -x <excel file>
+python3 submission.py -t V2 -x <excel file>
 ```
