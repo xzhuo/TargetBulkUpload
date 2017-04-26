@@ -8,7 +8,7 @@ import argparse
 
 my_token = 'tokenstring'
 bearer_token = 'bearer ' + my_token
-url = 'http://target.wustl.edu:8006'
+url = 'http://meta.target.wustl.edu'
 
 
 def get_args():
