@@ -1,14 +1,20 @@
+import sys
 import xlrd
 from collections import OrderedDict
 import urllib.request
 import urllib.error
 import json
 import argparse
+import logging
 # import ipdb  # for debug
 
 my_token = 'tokenstring'
 bearer_token = 'bearer ' + my_token
 url = 'http://meta.target.wustl.edu'
+# url = 'http://target.wustl.edu:8006'
+
+# hard code version for now, will get it from a url latter:
+versionNo = {"version": "2.0.1"}
 
 
 def get_args():
@@ -36,6 +42,10 @@ def main():
     args = get_args()
     allfields = urlfields('schema')
     relationshipDict = urlfields('relationships')
+    if versionNo["version"] not in args.excel:
+        logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
+        sys.exit(1)
+
     connectDict = {}
     fieldname = {}
     names = {}
@@ -53,6 +63,7 @@ def main():
     elif args.tem == "V2":
         submission = multi_excel2JSON(args.excel, allfields, fieldname)
     # ipdb.set_trace()
+    accession_check(submission)
     upload(submission, connectDict, names)
 
 
@@ -112,9 +123,9 @@ def excel2JSON(metadata_file, allfields, fieldname):
                     subkeytype = "string"
                 subkeytype = "string"  # wait until the correct type set!! Temporary line here
                 if subkey == "NA":
-                    print(key)
-                    print(Subkey)
-                    print("field name in excel not in the database!")
+                    logging.warning(key)
+                    logging.warning(Subkey)
+                    logging.warning("field name in excel not in the database!")
                 else:
                     value = row_values[k]
                     if len(value) == 0 and subkey != 'sysaccession':
@@ -168,9 +179,9 @@ def multi_excel2JSON(file, allfields, fieldname):
                 if Subkey == "System Accession":
                     subkey = "sysaccession"
                     subkeytype = "string"
-                    subkeytype = "string"
                 if Subkey == "User Accession":
                     Subkey = "User accession"
+                    subkeytype = "string"
                 for fielddict in allfields[key]:
                     if fielddict["text"] == Subkey:
                         subkey = fielddict["name"]
@@ -224,6 +235,18 @@ def request(url, parameter, method):
             if "accession" in ResponseDict:
                 # return response.accession
                 return ResponseDict["accession"]
+
+
+def accession_check(metadata):  # if there is duplicated user accession number.
+    for key in metadata:
+        accessionlist = []
+        for i in metadata[key]:
+            user_accession = i["user_accession"]
+            if user_accession not in accessionlist:
+                accessionlist.append(user_accession)
+            else:
+                logging.error("duplicates user accession %s in %s!" % (user_accession, key))
+                sys.exit(1)
 
 
 def upload(metadata, connectDict, names):
@@ -287,11 +310,16 @@ def upload(metadata, connectDict, names):
                             entry.pop("sysaccession")
                         for key in connectDict[header]:
                             tempDict[key] = entry.pop(key)
+
                         Acsn = request(fullurl, json.dumps(entry), 'POST')
-                        print("accesion created is %s" % Acsn)
-                        linkDict[header][Acsn] = tempDict
-                        AcsnDict[header][tempAcsn] = Acsn
-                        print("%s upload done without link" % (tempAcsn))
+                        if Acsn is None:
+                            logging.error("POST request falied!")
+                            sys.exit(1)
+                        else:
+                            print("accesion created is %s" % Acsn)
+                            linkDict[header][Acsn] = tempDict
+                            AcsnDict[header][tempAcsn] = Acsn
+                            print("%s upload done without link\n" % (tempAcsn))
     # ipdb.set_trace()
     for header in orderList:
         if header in linkDict:
@@ -353,7 +381,7 @@ def urlfields(kind):
         elif kind == 'relationships':
             urljson = url + '/schema/relationships/' + header + '.json'
         Header = header[:1].upper() + header[1:]
-        print(urljson)
+        # print(urljson)
         data = urllib.request.urlopen(urljson).read().decode('utf8')
         # str_data = data.readall().decode('utf-8')
         data = json.loads(data)
