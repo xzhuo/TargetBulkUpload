@@ -6,15 +6,16 @@ import urllib.error
 import json
 import argparse
 import logging
-# import ipdb  # for debug
+import datetime
+import ipdb  # for debug
 
 my_token = 'tokenstring'
 bearer_token = 'bearer ' + my_token
 url = 'http://meta.target.wustl.edu'
-# url = 'http://target.wustl.edu:8006'
+testurl = 'http://target.wustl.edu:8006'
 
 # hard code version for now, will get it from a url latter:
-versionNo = {"version": "2.0.1"}
+versionNo = {"version": "2.0.2"}
 
 
 def get_args():
@@ -24,8 +25,8 @@ def get_args():
         '-t',
         action="store",
         dest="tem",
-        choices=['V1', 'V2', 'CSV'],
-        help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet. V2 seperated different tables to different sheets in excel (recommended).',
+        choices=['V1', 'V2', 'CSV', 'json'],
+        help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet. V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.',
     )
     parser.add_argument(
         '--excel',
@@ -34,14 +35,20 @@ def get_args():
         dest="excel",
         help='The excel used for bulk upload.',
     )
-
+    parser.add_argument(
+        '--notest',
+        '-n',
+        action="store_true",
+        dest="notest",
+        help='test flag. default option is true, which will submit all the metadata to the test database. The metadata only goes to product database if this option is false. Our recommended practice is use TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the metadata successfully submitted to test database.',
+    )
     return parser.parse_args()
 
 
 def main():
     args = get_args()
-    allfields = urlfields('schema')
-    relationshipDict = urlfields('relationships')
+    allfields = urlfields('schema', testurl)
+    relationshipDict = urlfields('relationships', testurl)
     if versionNo["version"] not in args.excel:
         logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
         sys.exit(1)
@@ -62,9 +69,17 @@ def main():
         submission = excel2JSON(args.excel, allfields, fieldname)
     elif args.tem == "V2":
         submission = multi_excel2JSON(args.excel, allfields, fieldname)
+    elif args.tem == "json":
+        with open(args.tem) as data_file:
+            submission = json.load(data_file)
     # ipdb.set_trace()
     accession_check(submission)
-    upload(submission, connectDict, names)
+    print(json.dumps(submission, indent=4, sort_keys=True))
+    if args.notest:
+        upload(submission, connectDict, names, url)
+    else:
+        upload(submission, connectDict, names, testurl)
+        print("If you did not find errors above, all the records were successfully uploaded to the testing database, now you can upload the same file to real database with the '--notest' flag.")
 
 
 # Excel to JSON module write by Ananda
@@ -121,7 +136,7 @@ def excel2JSON(metadata_file, allfields, fieldname):
                 if subkey == "NA" and key in fieldname and Subkey in fieldname[key]:
                     subkey = fieldname[key][Subkey]
                     subkeytype = "string"
-                subkeytype = "string"  # wait until the correct type set!! Temporary line here
+                # subkeytype = "string"  # wait until the correct type set!! Temporary line here
                 if subkey == "NA":
                     logging.warning(key)
                     logging.warning(Subkey)
@@ -193,18 +208,25 @@ def multi_excel2JSON(file, allfields, fieldname):
                     subkey = fieldname[key][Subkey]
                     subkeytype = "string"
 
-                subkeytype = "string"  # wait until the correct type set!! Temporary line here
+                if subkey == "zip_code" or subkey == "batchId":
+                    subkeytype = "string"
+                # subkeytype = "string"  # wait until the correct type set!! Temporary line here
                 if subkey == "NA":
                     print(key)
                     print(Subkey)
                     print("field name in excel not in the database!")
                 else:
                     value = sheet.cell(row_index, col_index).value
-                    if value == '' and subkey != "sysaccession":
-                        value = 'NA'  # still with TRUE or FALSE value
                     if subkey == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
-                    d[subkey] = str(value).rstrip()  # use string for now. May use number later.
+                    if value != '' or subkey == "sysaccession":
+                        if subkeytype == "string":
+                            d[subkey] = str(value).rstrip()  # use string for now. May use number later.
+                        elif subkeytype == "date":
+                            # ipdb.set_trace()
+                            d[subkey] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
+                        else:
+                            d[subkey] = value
             if ("user_accession" in d and d["user_accession"].startswith(accession_rule)):
                 dict_list.append(d)
             else:
@@ -212,9 +234,10 @@ def multi_excel2JSON(file, allfields, fieldname):
 
         super_data[key] = dict_list
 
-    j = json.dumps(super_data)
+    # j = json.dumps(super_data)
     print("Excel processing DONE")
-    return json.loads(j)
+    # return json.loads(j)
+    return super_data
 
 
 def request(url, parameter, method):
@@ -249,7 +272,7 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                 sys.exit(1)
 
 
-def upload(metadata, connectDict, names):
+def upload(metadata, connectDict, names, url):
     AcsnDict = {}
     linkDict = {}
 
@@ -295,7 +318,8 @@ def upload(metadata, connectDict, names):
                         Acsn = entry.pop("sysaccession")
                         tempAcsn = entry["user_accession"]
                         for key in connectDict[header]:
-                            tempDict[key] = entry.pop(key)
+                            if key in entry:
+                                tempDict[key] = entry.pop(key)
                         updateurl = fullurl + '/' + Acsn
                         request(updateurl, json.dumps(entry), 'POST')
                         print("accesion updated is %s" % Acsn)
@@ -309,11 +333,11 @@ def upload(metadata, connectDict, names):
                         if "sysaccession" in entry:
                             entry.pop("sysaccession")
                         for key in connectDict[header]:
-                            tempDict[key] = entry.pop(key)
-
+                            if key in entry:
+                                tempDict[key] = entry.pop(key)
                         Acsn = request(fullurl, json.dumps(entry), 'POST')
                         if Acsn is None:
-                            logging.error("POST request falied!")
+                            logging.error("POST request failed!")
                             sys.exit(1)
                         else:
                             print("accesion created is %s" % Acsn)
@@ -373,7 +397,7 @@ def getfields():
     return allfieldnames
 
 
-def urlfields(kind):
+def urlfields(kind, url):
     allfieldnames = {}
     for header in ("assay", "bioproject", "biosample", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
         if kind == 'schema':
@@ -381,7 +405,7 @@ def urlfields(kind):
         elif kind == 'relationships':
             urljson = url + '/schema/relationships/' + header + '.json'
         Header = header[:1].upper() + header[1:]
-        # print(urljson)
+        print(urljson)
         data = urllib.request.urlopen(urljson).read().decode('utf8')
         # str_data = data.readall().decode('utf-8')
         data = json.loads(data)
