@@ -42,19 +42,28 @@ def get_args():
         dest="notest",
         help='test flag. default option is true, which will submit all the metadata to the test database. The metadata only goes to product database if this option is false. Our recommended practice is use TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the metadata successfully submitted to test database.',
     )
+    parser.add_argument(
+        '--tokenkey',
+        '-k',
+        action="store",
+        dest="token",
+        help='The token string.',
+    )
     return parser.parse_args()
 
 
 def main():
     args = get_args()
+    if args.token:
+        global bearer_token
+        bearer_token = 'bearer ' + args.token
     allfields = urlfields('schema', testurl)
     relationshipDict = urlfields('relationships', testurl)
     if versionNo["version"] not in args.excel:
         logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
         sys.exit(1)
-
     connectDict = {}
-    fieldname = {}
+    fieldname = {}  # display_name: name for connection fields
     names = {}
     for Header in relationshipDict:
         if Header in relationshipDict and 'one' in relationshipDict[Header]:
@@ -65,16 +74,50 @@ def main():
                 connectDict[Header] = {x['name']: x['to'] for x in relationshipDict[Header]['connections'] if 'to' in x and x['to'] != 'experiment'}  # exclude experiment connections
                 fieldname[Header] = {x['display_name']: x['name'] for x in relationshipDict[Header]['connections'] if 'display_name' in x}
 
+    schemarelationshipname = {}  # display_name: name for allfields
+    for Header in allfields:
+        print(Header)
+        if Header in fieldname:
+            schemarelationshipname[Header] = {**{x['text']: x['name'] for x in allfields[Header] if 'text' in x}, **fieldname[Header]}  # require python3.5 or later.
+        else:
+            schemarelationshipname[Header] = {x['text']: x['name'] for x in allfields[Header] if 'text' in x}
+
     if args.tem == "V1":
         submission = excel2JSON(args.excel, allfields, fieldname)
     elif args.tem == "V2":
         submission = multi_excel2JSON(args.excel, allfields, fieldname)
     elif args.tem == "json":
-        with open(args.tem) as data_file:
-            submission = json.load(data_file)
-    # ipdb.set_trace()
-    accession_check(submission)
+        with open(args.excel) as data_file:
+            submission_in = json.load(data_file)
+            submission = dict()
+            for header in submission_in:
+                submission[header] = list()
+                for acc in submission_in[header]:
+                    if acc != "NA":
+                        if "User Accession" in submission_in[header][acc]:
+                            submission_in[header][acc]["User accession"] = submission_in[header][acc].pop("User Accession")
+                        # submission[header][acc] = {schemarelationshipname[header][key]: value for (key, value) in submission[header][acc].items()}
+                        submission[header].append({schemarelationshipname[header][key]: value for (key, value) in submission_in[header][acc].items()})
+
+                    # for subkey in submission[key][acc]:
+                    #     if subkey == "User Accession":
+                    #         subkey = "User accession"
+                    #     if subkey in schemafieldname[key]:
+                    #         submission[key][acc][schemafieldname[key][subkey]] = submission[key][acc].pop(subkey)
+                    #         # replace subkey: value to schemafieldname[key][subkey]: value
+                    #     elif subkey in fieldname[key]:
+                    #         # replace subkey: value to fieldname[key][subkey]: value
+                    #         submission[key][acc][fieldname[key][subkey]] = submission[key][acc].pop(subkey)
+                    #     # elif subkey == "User Accession" or subkey == "User accession":
+                    #     #     submission[key][acc]["user_accession"] = submission[key][acc].pop(subkey)
+                    #     else:
+                    #         ipdb.set_trace()
+                    #         print("not found subkey?")
+                    #         print(key)
+                    #         print(subkey)
+
     print(json.dumps(submission, indent=4, sort_keys=True))
+    accession_check(submission)
     if args.notest:
         upload(submission, connectDict, names, url)
     else:
