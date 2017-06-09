@@ -12,7 +12,7 @@ user can upload the same file to PROD database with “-notest” flag.
 * Change several EXCEL column names from *(units) to *(include units).
 * Print out records in json format on screen before upload.
 * Support upload json text file to database (for testing purpose).
-* Compactible with excel template 2.0.2
+* Compatible with excel template 2.0.2
 
 ## [0.1.1] - 2017-05-11
 ### changes committed
