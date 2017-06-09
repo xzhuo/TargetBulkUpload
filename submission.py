@@ -26,6 +26,7 @@ def get_args():
         action="store",
         dest="tem",
         choices=['V1', 'V2', 'CSV', 'json'],
+        default='V2',
         help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet. V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.',
     )
     parser.add_argument(
@@ -47,7 +48,7 @@ def get_args():
         '-k',
         action="store",
         dest="token",
-        help='The token string.',
+        help="User's API key.",
     )
     return parser.parse_args()
 
@@ -270,10 +271,12 @@ def multi_excel2JSON(file, allfields, fieldname):
                             d[subkey] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
                             d[subkey] = value
-            if ("user_accession" in d and d["user_accession"].startswith(accession_rule)):
-                dict_list.append(d)
-            else:
-                print("There has to be a valid accession in %s" % key)
+            dict_list.append(d)
+            # if ("user_accession" in d and d["user_accession"].startswith(accession_rule)):
+            #     dict_list.append(d)
+            # else:
+            #     logging.error("There has to be a valid user accession in %s" % key)
+            #     sys.exit(1)
 
         super_data[key] = dict_list
 
@@ -294,7 +297,8 @@ def request(url, parameter, method):
     except urllib.error.URLError as e:
         ResponseData = e.read().decode("utf8", 'ignore')
         ResponseDict = json.loads(ResponseData)
-        print(ResponseDict["message"])
+        logging.error(ResponseDict["message"])
+        sys.exit(1)
 
     else:
             ResponseDict = json.loads(response.read().decode('ascii'))
@@ -307,12 +311,13 @@ def accession_check(metadata):  # if there is duplicated user accession number.
     for key in metadata:
         accessionlist = []
         for i in metadata[key]:
-            user_accession = i["user_accession"]
-            if user_accession not in accessionlist:
-                accessionlist.append(user_accession)
-            else:
-                logging.error("duplicates user accession %s in %s!" % (user_accession, key))
-                sys.exit(1)
+            if "user_accession" in i:
+                user_accession = i["user_accession"]
+                if user_accession not in accessionlist:
+                    accessionlist.append(user_accession)
+                else:
+                    logging.error("duplicates user accession %s in %s!" % (user_accession, key))
+                    sys.exit(1)
 
 
 def upload(metadata, connectDict, names, url):
@@ -339,19 +344,22 @@ def upload(metadata, connectDict, names, url):
                 for entry in metadata[header]:  # metadata[header] is a list of dicts.
                     if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                         Acsn = entry.pop("sysaccession")
-                        tempAcsn = entry["user_accession"]
+                        if "user_accession" in entry and len(entry["user_accession"]) > 0:
+                            tempAcsn = entry["user_accession"]
+                        else:
+                            tempAcsn = entry["sysaccession"]
                         updateurl = fullurl + '/' + Acsn
                         request(updateurl, json.dumps(entry), 'POST')
-                        print("accesion updated is %s" % Acsn)
+                        print("record %s has been updated!" % Acsn)
                         AcsnDict[header][tempAcsn] = Acsn
                     else:
                         tempAcsn = entry["user_accession"]
                         if "sysaccession" in entry:
                             entry.pop("sysaccession")
                         Acsn = request(fullurl, json.dumps(entry), 'POST')
-                        print("accesion created is %s" % Acsn)
                         AcsnDict[header][tempAcsn] = Acsn
-                        print("%s upload done" % (tempAcsn))
+                        # print("%s upload done" % (tempAcsn))
+                        print("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[header] = {}
@@ -359,13 +367,17 @@ def upload(metadata, connectDict, names, url):
                     if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                         tempDict = {}
                         Acsn = entry.pop("sysaccession")
-                        tempAcsn = entry["user_accession"]
+                        if "user_accession" in entry and len(entry["user_accession"]) > 0:
+                            tempAcsn = entry["user_accession"]
+                        else:
+                            tempAcsn = entry["sysaccession"]
+                        # tempAcsn = entry["user_accession"]
                         for key in connectDict[header]:
                             if key in entry:
                                 tempDict[key] = entry.pop(key)
                         updateurl = fullurl + '/' + Acsn
                         request(updateurl, json.dumps(entry), 'POST')
-                        print("accesion updated is %s" % Acsn)
+                        print("record %s has been updated!" % Acsn)
                         AcsnDict[header][tempAcsn] = Acsn
                         linkDict[header][Acsn] = tempDict
 
@@ -387,6 +399,8 @@ def upload(metadata, connectDict, names, url):
                             linkDict[header][Acsn] = tempDict
                             AcsnDict[header][tempAcsn] = Acsn
                             print("%s upload done without link\n" % (tempAcsn))
+                            print("Record %s has been successfully uploaded to database with a system accession %s. But there are relationships need to be linked." % (tempAcsn, Acsn))
+
     # ipdb.set_trace()
     for header in orderList:
         if header in linkDict:
@@ -413,7 +427,7 @@ def upload(metadata, connectDict, names, url):
                         else:
                             linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": connection_name}
                     request(linkurl, json.dumps(linkBody), 'POST')
-                    print("%s link upload done" % (Acsn))
+                    print("%s relationships successfully linked!" % (Acsn))
 
 
 def getfields():
