@@ -295,7 +295,7 @@ def request(url, parameter, method):
     req.add_header('Accept', 'application/json')
     req.add_header('Authorization', bearer_token)  # add token 'bearer hed35h5i1ajf07g5'
     try:
-        response = urllib.request.urlopen(req)
+        response = urllib.request.urlopen(req, timeout=10)
     except urllib.error.URLError as e:
         ResponseData = e.read().decode("utf8", 'ignore')
         ResponseDict = json.loads(ResponseData)
