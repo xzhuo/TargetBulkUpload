@@ -25,7 +25,7 @@ def get_args():
         '-t',
         action="store",
         dest="tem",
-        choices=['V1', 'V2', 'CSV', 'json'],
+        choices=['V1', 'V2', 'json'],
         default='V2',
         help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet. V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.',
     )
@@ -84,7 +84,9 @@ def main():
             schemarelationshipname[Header] = {x['text']: x['name'] for x in allfields[Header] if 'text' in x}
 
     if args.tem == "V1":
-        submission = excel2JSON(args.excel, allfields, fieldname)
+        print("excel template Version 1 is no longer supported, please download and fill in metadata using the latest template.")
+        sys.exit(1)
+        # submission = excel2JSON(args.excel, allfields, fieldname)
     elif args.tem == "V2":
         submission = multi_excel2JSON(args.excel, allfields, fieldname)
     elif args.tem == "json":
@@ -127,95 +129,95 @@ def main():
 
 
 # Excel to JSON module write by Ananda
-def excel2JSON(metadata_file, allfields, fieldname):
-    header = ["Lab", "Bioproject", "Litter", "Mouse", "Diet", "Treatment", "Biosample", "Library", "Assay", "Reagent", "File"]  # file.readlines()
-    num_head_lines = len(header)
-    wb = xlrd.open_workbook(metadata_file)
-    sh = wb.sheet_by_index(0)
-    numrows = sh.nrows
-    j = 0
-    header_line = []
-    intermediate_rows = []
-    # num_cols = [10, 5, 11, 15, 7, 18, 25, 11, 16, 11, 29]  # no longer need this now
+# def excel2JSON(metadata_file, allfields, fieldname):
+#     header = ["Lab", "Bioproject", "Litter", "Mouse", "Diet", "Treatment", "Biosample", "Library", "Assay", "Reagent", "File"]  # file.readlines()
+#     num_head_lines = len(header)
+#     wb = xlrd.open_workbook(metadata_file)
+#     sh = wb.sheet_by_index(0)
+#     numrows = sh.nrows
+#     j = 0
+#     header_line = []
+#     intermediate_rows = []
+#     # num_cols = [10, 5, 11, 15, 7, 18, 25, 11, 16, 11, 29]  # no longer need this now
 
-    for i in range(0, numrows):
-        if(j < num_head_lines and sh.cell(i, 0).value == header[j].rstrip()):
-            header_line.append(i)
-            if(j > 0):
-                intermediate_rows.append(i - header_line[j - 1] - 1)
-            j += 1
+#     for i in range(0, numrows):
+#         if(j < num_head_lines and sh.cell(i, 0).value == header[j].rstrip()):
+#             header_line.append(i)
+#             if(j > 0):
+#                 intermediate_rows.append(i - header_line[j - 1] - 1)
+#             j += 1
 
-    intermediate_rows.append(i - header_line[j - 1])
-    super_data = OrderedDict()
-    for i in range(0, num_head_lines):
-        data_list = []
-        pointer = header_line[i]
-        hr = pointer + 1
-        key = str(sh.cell_value(pointer, 0)).rstrip()  # Xiaoyu: remove trailing white spaces
-        for j in range(1, intermediate_rows[i]):
-            data = OrderedDict()
-            row_values = sh.row_values(hr + j)
-            valuelength = 0
-            for value in row_values:
-                valuelength += len(str(value))
-            if valuelength == 0:
-                continue
-            k = 0
-            while len(str(sh.cell(hr, k).value).rstrip()):
-                # for k in range(0, num_cols[i]):
-                Subkey = str(sh.cell(hr, k).value).rstrip()
-                # Lot ID and Exposure Classification
-                subkey = "NA"
-                subkeytype = "unknown"
-                if Subkey == "Accession":
-                    subkey = "User Accession"
-                    subkeytype = "string"
-                if Subkey == "Litter size (survived)":
-                    Subkey = "Litter size (survived to weaning)"
-                for fielddict in allfields[key]:
-                    if fielddict["text"] == Subkey:
-                        subkey = fielddict["name"]
-                        subkeytype = fielddict["type"]
-                # subkey = Subkey[:1].lower() + Subkey[1:]  # first character lowercase
-                if subkey == "NA" and key in fieldname and Subkey in fieldname[key]:
-                    subkey = fieldname[key][Subkey]
-                    subkeytype = "string"
-                # subkeytype = "string"  # wait until the correct type set!! Temporary line here
-                if subkey == "NA":
-                    logging.warning(key)
-                    logging.warning(Subkey)
-                    logging.warning("field name in excel not in the database!")
-                else:
-                    value = row_values[k]
-                    if len(value) == 0 and subkey != 'sysaccession':
-                        value = 'NA'
-                    if subkeytype == "number":
-                        try:
-                            data[subkey] = int(value)
-                        except:
-                            data[subkey] = -1
-                    # elif subkeytype == "date":
-                    #     data[subkey] =
-                    else:
-                        data[subkey] = str(value)
+#     intermediate_rows.append(i - header_line[j - 1])
+#     super_data = OrderedDict()
+#     for i in range(0, num_head_lines):
+#         data_list = []
+#         pointer = header_line[i]
+#         hr = pointer + 1
+#         key = str(sh.cell_value(pointer, 0)).rstrip()  # Xiaoyu: remove trailing white spaces
+#         for j in range(1, intermediate_rows[i]):
+#             data = OrderedDict()
+#             row_values = sh.row_values(hr + j)
+#             valuelength = 0
+#             for value in row_values:
+#                 valuelength += len(str(value))
+#             if valuelength == 0:
+#                 continue
+#             k = 0
+#             while len(str(sh.cell(hr, k).value).rstrip()):
+#                 # for k in range(0, num_cols[i]):
+#                 Subkey = str(sh.cell(hr, k).value).rstrip()
+#                 # Lot ID and Exposure Classification
+#                 subkey = "NA"
+#                 subkeytype = "unknown"
+#                 if Subkey == "Accession":
+#                     subkey = "User Accession"
+#                     subkeytype = "string"
+#                 if Subkey == "Litter size (survived)":
+#                     Subkey = "Litter size (survived to weaning)"
+#                 for fielddict in allfields[key]:
+#                     if fielddict["text"] == Subkey:
+#                         subkey = fielddict["name"]
+#                         subkeytype = fielddict["type"]
+#                 # subkey = Subkey[:1].lower() + Subkey[1:]  # first character lowercase
+#                 if subkey == "NA" and key in fieldname and Subkey in fieldname[key]:
+#                     subkey = fieldname[key][Subkey]
+#                     subkeytype = "string"
+#                 # subkeytype = "string"  # wait until the correct type set!! Temporary line here
+#                 if subkey == "NA":
+#                     logging.warning(key)
+#                     logging.warning(Subkey)
+#                     logging.warning("field name in excel not in the database!")
+#                 else:
+#                     value = row_values[k]
+#                     if len(value) == 0 and subkey != 'sysaccession':
+#                         value = 'NA'
+#                     if subkeytype == "number":
+#                         try:
+#                             data[subkey] = int(value)
+#                         except:
+#                             data[subkey] = -1
+#                     # elif subkeytype == "date":
+#                     #     data[subkey] =
+#                     else:
+#                         data[subkey] = str(value)
 
-                    # if isinstance(value, float):
-                    #     if subkey.endswith('Id'):
-                    #         data[subkey] = str(value)
-                    #     else:
-                    #         data[subkey] = int(value)
-                    # else:
-                    #     data[subkey] = str(value)
-                    # data[subkey] = row_values[k]
-                k += 1
-            data_list.append(data)
+#                     # if isinstance(value, float):
+#                     #     if subkey.endswith('Id'):
+#                     #         data[subkey] = str(value)
+#                     #     else:
+#                     #         data[subkey] = int(value)
+#                     # else:
+#                     #     data[subkey] = str(value)
+#                     # data[subkey] = row_values[k]
+#                 k += 1
+#             data_list.append(data)
 
-        super_data[key] = data_list
-    j = json.dumps(super_data)
-    # with open('TaRGET_metadata.json', 'w') as f:
-    #     f.write(j)
-    print("Excel processing DONE")
-    return json.loads(j)
+#         super_data[key] = data_list
+#     j = json.dumps(super_data)
+#     # with open('TaRGET_metadata.json', 'w') as f:
+#     #     f.write(j)
+#     print("Excel processing DONE")
+#     return json.loads(j)
 
 
 def multi_excel2JSON(file, allfields, fieldname):
@@ -316,8 +318,18 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                 if user_accession not in accessionlist:
                     accessionlist.append(user_accession)
                 else:
-                    logging.error("duplicates user accession %s in %s!" % (user_accession, key))
+                    logging.error("duplicated user accession %s in %s!" % (user_accession, key))
                     sys.exit(1)
+            elif "sysaccession" in i:
+                user_accession = i["sysaccession"]
+                if user_accession not in accessionlist:
+                    accessionlist.append(user_accession)
+                else:
+                    logging.error("duplicated user accession %s in %s!" % (user_accession, key))
+                    sys.exit(1)
+            else:
+                logging.error("There has to be a user accession or a system accession in all rows. Seems there is at least one row in %s does not have either one." % (key))
+                sys.exit(1)
 
 
 def upload(metadata, connectDict, names, url):
@@ -347,7 +359,7 @@ def upload(metadata, connectDict, names, url):
                         if "user_accession" in entry and len(entry["user_accession"]) > 0:
                             tempAcsn = entry["user_accession"]
                         else:
-                            tempAcsn = entry["sysaccession"]
+                            tempAcsn = Acsn
                         updateurl = fullurl + '/' + Acsn
                         request(updateurl, json.dumps(entry), 'POST')
                         print("record %s has been updated!" % Acsn)
@@ -370,7 +382,7 @@ def upload(metadata, connectDict, names, url):
                         if "user_accession" in entry and len(entry["user_accession"]) > 0:
                             tempAcsn = entry["user_accession"]
                         else:
-                            tempAcsn = entry["sysaccession"]
+                            tempAcsn = Acsn
                         # tempAcsn = entry["user_accession"]
                         for key in connectDict[header]:
                             if key in entry:
