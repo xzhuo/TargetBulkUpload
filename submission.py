@@ -265,7 +265,7 @@ def multi_excel2JSON(file, allfields, fieldname):
                     value = sheet.cell(row_index, col_index).value
                     if subkey == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
-                    if value != '' or subkey == "sysaccession":
+                    if value != '' or value != 'NA' or subkey == "sysaccession":
                         if subkeytype == "string":
                             d[subkey] = str(value).rstrip()  # use string for now. May use number later.
                         elif subkeytype == "date":
