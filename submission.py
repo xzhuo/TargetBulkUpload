@@ -312,8 +312,6 @@ def request(url, parameter, method):
     else:
             ResponseDict = json.loads(response.read().decode('ascii'))
             if "accession" in ResponseDict:
-                # return response.accession
-                ipdb.set_trace()
                 return ResponseDict["accession"]
             else:
                 return ResponseDict["statusCode"]
