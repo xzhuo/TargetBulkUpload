@@ -72,7 +72,8 @@ def main():
             # fieldname[Header] = {}
             names[Header] = relationshipDict[Header]['all']
             if 'connections' in relationshipDict[Header]:
-                connectDict[Header] = {x['name']: x['to'] for x in relationshipDict[Header]['connections'] if 'to' in x and x['to'] != 'experiment'}  # exclude experiment connections
+                connectDict[Header] = {x['name']: x['to'] for x in relationshipDict[Header]['connections'] if 'to' in x}  # include experiment connections
+                # connectDict[Header] = {x['name']: x['to'] for x in relationshipDict[Header]['connections'] if 'to' in x and x['to'] != 'experiment'}  # exclude experiment connections
                 fieldname[Header] = {x['display_name']: x['name'] for x in relationshipDict[Header]['connections'] if 'display_name' in x}
 
     schemarelationshipname = {}  # display_name: name for allfields
@@ -342,7 +343,6 @@ def upload(metadata, connectDict, names, url):
     orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File"]
     for header in orderList:
         print(header)
-
         if header in metadata:
             # swap column name in excel to field name in database
             # for entry in metadata[header]:
