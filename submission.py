@@ -36,7 +36,8 @@ def get_args():
         '-x',
         action="store",
         dest="excel",
-        help='The excel used for bulk upload.',
+        required=True,
+        help='The excel used for bulk upload. Required.',
     )
     parser.add_argument(
         '--notest',
@@ -50,7 +51,8 @@ def get_args():
         '-k',
         action="store",
         dest="token",
-        help="User's API key.",
+        required=True,
+        help="User's API key. Required.",
     )
     return parser.parse_args()
 
