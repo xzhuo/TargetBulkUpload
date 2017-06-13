@@ -258,15 +258,15 @@ def multi_excel2JSON(file, allfields, fieldname):
                     subkeytype = "string"
                 # subkeytype = "string"  # wait until the correct type set!! Temporary line here
                 if subkey == "NA":
-                    print(key)
-                    print(Subkey)
-                    print("field name in excel not in the database!")
+                    print("field name %s from %s in excel is not in the database!" % (Subkey, key))
                 else:
                     value = sheet.cell(row_index, col_index).value
-                    ctype = sheet.cell(row_index, col_index).ctype
+                    if subkey == "user_accession" and value == "NA":  # delete 'NA' in user_accession. So 
+                        value = ''
                     if subkey == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
-                    if value != '' or value != 'NA' or subkey == "sysaccession":
+                    if value != '' or subkey == "sysaccession":
+                        ctype = sheet.cell(row_index, col_index).ctype
                         if subkeytype == "string":
                             d[subkey] = str(value).rstrip()  # use string for now. May use number later.
                         elif subkeytype == "date" and ctype == 3:
@@ -274,12 +274,14 @@ def multi_excel2JSON(file, allfields, fieldname):
                             d[subkey] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
                             d[subkey] = value
-            dict_list.append(d)
-            # if ("user_accession" in d and d["user_accession"].startswith(accession_rule)):
-            #     dict_list.append(d)
-            # else:
-            #     logging.error("There has to be a valid user accession in %s" % key)
-            #     sys.exit(1)
+            if "user_accession" in d:
+                if d["user_accession"].startswith(accession_rule):
+                    dict_list.append(d)
+                else:
+                    logging.error("There has to be a valid user accession in %s" % key)
+                    sys.exit(1)
+            else:
+                dict_list.append(d)
 
         super_data[key] = dict_list
 
@@ -422,8 +424,8 @@ def upload(metadata, connectDict, names, url):
                 for connection_name in linkDict[header][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
                     # regex connection_name here. if true, use it directly, otherwise use connectDict[header][connection_name]:  I don't understand the comment now.
                     # linkTo = AcsnDict[header][connectDict[header][connection_name]]
-                    if linkDict[header][Acsn][connection_name] == 'NA':
-                        continue
+                    # if linkDict[header][Acsn][connection_name] == 'NA':
+                    #     continue
                     linkTo = connectDict[header][connection_name]
                     LinkTo = linkTo[:1].upper() + linkTo[1:]
                     linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
@@ -433,12 +435,14 @@ def upload(metadata, connectDict, names, url):
                             linkBody = {"connectionAcsn": linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
                         else:
                             linkBody = {"connectionAcsn": linkDict[header][Acsn][connection_name], "connectionName": connection_name}
-                    else:
+                    elif linkDict[header][Acsn][connection_name].startswith("USR"):
                         if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
                             # linkBody = {names[linkTo]['Acsn']: linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
                             linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": "assay_input"}
                         else:
                             linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": connection_name}
+                    else:
+                        logging.warning("%s is not a valid accession. %s relationship %s is not established." % (linkDict[header][Acsn][connection_name], Acsn, connection_name))
                     request(linkurl, json.dumps(linkBody), 'POST')
                     print("%s relationships successfully linked!" % (Acsn))
 
