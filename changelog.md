@@ -1,6 +1,26 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2017-06-13
+### changes committed
+* Add 10 seconds timeout to post request, and print a proper warning message after timeout.
+* Support both string in format "YYYY-MM-DD" or excel date format.
+* Support connect to experiment by providing experiment system accession number.
+* Accession is no longer required. Random uuid will be assigned to
+user accession if it is blank.
+* Verify if all the user accession in relationship columns exist in the
+excel file.
+* Print a warning message if the relationship connection failed to be
+established.
+
+## [0.1.3] - 2017-06-09
+### changes committed
+* No longer support excel template V1;
+* No longer require user accession in all records if there is a system
+accession;
+* Remove requirement for user accession;
+* Change "token" to "API key" in help message;
+* Change some message wording.
 
 ## [0.1.2] - 2017-06-08
 ### changes committed
