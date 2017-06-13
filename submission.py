@@ -329,7 +329,7 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                 if user_accession not in accessionlist:
                     accessionlist.append(user_accession)
                 else:
-                    logging.error("duplicated user accession %s in %s!" % (user_accession, key))
+                    logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (user_accession, key))
                     sys.exit(1)
             else:
                 logging.error("There has to be a user accession or a system accession in all rows. Seems there is at least one row in %s does not have either one." % (key))
