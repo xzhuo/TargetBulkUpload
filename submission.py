@@ -7,6 +7,8 @@ import json
 import argparse
 import logging
 import datetime
+import uuid  # used to generate unique user accesion if it is not provided.
+from socket import timeout
 import ipdb  # for debug
 
 my_token = 'tokenstring'
@@ -262,8 +264,9 @@ def multi_excel2JSON(file, allfields, fieldname):
                     print("field name %s from %s in excel is not in the database!" % (Subkey, key))
                 else:
                     value = sheet.cell(row_index, col_index).value
-                    if subkey == "user_accession" and value == "NA":  # delete 'NA' in user_accession. So 
-                        value = ''
+                    if subkey == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession. So 
+                        randomid = uuid.uuid1()
+                        value = accession_rule + str(randomid)
                     if subkey == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or subkey == "sysaccession":
@@ -275,14 +278,11 @@ def multi_excel2JSON(file, allfields, fieldname):
                             d[subkey] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
                             d[subkey] = value
-            if "user_accession" in d:
-                if d["user_accession"].startswith(accession_rule):
-                    dict_list.append(d)
-                else:
-                    logging.error("There has to be a valid user accession in %s" % key)
-                    sys.exit(1)
-            else:
+            if d["user_accession"].startswith(accession_rule):
                 dict_list.append(d)
+            else:
+                logging.error("There has to be a valid user accession in %s" % key)
+                sys.exit(1)
 
         super_data[key] = dict_list
 
@@ -305,12 +305,18 @@ def request(url, parameter, method):
         ResponseDict = json.loads(ResponseData)
         logging.error(ResponseDict["message"])
         sys.exit(1)
+    except timeout:
+        logging.error("Fail to update or link the following record to databse link %s. Please make sure the system accession used here is correct.\n%s" % (url, parameter))
+        sys.exit(1)
 
     else:
             ResponseDict = json.loads(response.read().decode('ascii'))
             if "accession" in ResponseDict:
                 # return response.accession
+                ipdb.set_trace()
                 return ResponseDict["accession"]
+            else:
+                return ResponseDict["statusCode"]
 
 
 def accession_check(metadata):  # if there is duplicated user accession number.
@@ -332,7 +338,7 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                     logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (user_accession, key))
                     sys.exit(1)
             else:
-                logging.error("There has to be a user accession or a system accession in all rows. Seems there is at least one row in %s does not have either one." % (key))
+                logging.error("system failed to generate a user accession. It is a bug. Seems there is at least one row in %s does not have either one." % (key))
                 sys.exit(1)
 
 
@@ -436,15 +442,23 @@ def upload(metadata, connectDict, names, url):
                         else:
                             linkBody = {"connectionAcsn": linkDict[header][Acsn][connection_name], "connectionName": connection_name}
                     elif linkDict[header][Acsn][connection_name].startswith("USR"):
-                        if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
-                            # linkBody = {names[linkTo]['Acsn']: linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
-                            linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": "assay_input"}
+                        # ipdb.set_trace()
+                        if linkDict[header][Acsn][connection_name] in AcsnDict[LinkTo]:
+                            if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
+                                # linkBody = {names[linkTo]['Acsn']: linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
+                                linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": "assay_input"}
+                            else:
+                                linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": connection_name}
                         else:
-                            linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": connection_name}
+                            logging.error("There is an accession %s in %s but not in %s. Please make sure all the connections are valid accessions." % (linkDict[header][Acsn][connection_name], header, LinkTo))
+                            sys.exit(1)
                     else:
-                        logging.warning("%s is not a valid accession. %s relationship %s is not established." % (linkDict[header][Acsn][connection_name], Acsn, connection_name))
-                    request(linkurl, json.dumps(linkBody), 'POST')
-                    print("%s relationships successfully linked!" % (Acsn))
+                        logging.warning("%s is not a valid accession. %s %s relationship %s is not established." % (linkDict[header][Acsn][connection_name], header, Acsn, connection_name))
+                    responsestatus = request(linkurl, json.dumps(linkBody), 'POST')
+                    if responsestatus == 200:
+                        print("%s relationships successfully linked!" % (Acsn))
+                    else:
+                        logging.warning("%s relationships is not linked!" % (Acsn))
 
 
 def getfields():
