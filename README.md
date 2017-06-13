@@ -12,7 +12,7 @@ pip3 install xlrd
 The script can be used to upload metadata to TARGET dcc metadata databse from a specific excel template. 
 You can use it to:
 1. Upload new metedata to the database;
-2. Update existing record in the database;
+2. Update existing records in the database;
 3. Establish relationships between metadata records.
 
 ## How to use it
