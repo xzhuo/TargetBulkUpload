@@ -338,7 +338,7 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                     logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (user_accession, key))
                     sys.exit(1)
             else:
-                logging.error("system failed to generate a user accession. It is a bug. Seems there is at least one row in %s does not have either one." % (key))
+                logging.error("system failed to generate a user accession. It is a bug. Seems there is at least one row in %s does not have accession." % (key))
                 sys.exit(1)
 
 
@@ -420,9 +420,10 @@ def upload(metadata, connectDict, names, url):
                             linkDict[header][Acsn] = tempDict
                             AcsnDict[header][tempAcsn] = Acsn
                             print("%s upload done without link\n" % (tempAcsn))
-                            print("Record %s has been successfully uploaded to database with a system accession %s. But there are relationships need to be linked." % (tempAcsn, Acsn))
+                            print("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
 
     # ipdb.set_trace()
+    print("all the record uploaded, it is time to connect all the relationships!\n")
     for header in orderList:
         if header in linkDict:
             fullurl = url + '/api/' + names[header]
