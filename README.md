@@ -31,7 +31,11 @@ You can use it to:
 	* If both "systerm accession" and "user accession" are used, both of them can be used to establish relationship.
 	* All the date in the excel can be a date type in excel format, or a string in format "YYYY-MM-DD". Don't worry if excel changed date format, it means it is a correct date type.
 	* The relationship columns are labeled with a different color on the right side in each sheet. It should be either a "user accession" in the same excel file or a existing "system accession" in the database.
-3. Run it with command:
+3. Run it with following command in test mode:
 ```
 python3 submission.py -k <API key> -x <excel file>
+```
+4. If there is no error during test run, you can upload same excel file to the production database with the following command (please don't use the following command and contact us if there is any unexpected warning or error):
+```
+python3 submission.py -k <API key> -x <excel file> --notest
 ```
