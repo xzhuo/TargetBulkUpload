@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 * Add 10 seconds timeout to post request, and print a proper warning message after timeout.
 * Support both string in format "YYYY-MM-DD" or excel date format.
 * Support connect to experiment by providing experiment system accession number.
-* Accession is no longer required. Random uuid will be assigned to
+* Neither user accession nor system accession is required. Random uuid will be assigned to
 user accession if it is blank.
 * Verify if all the user accession in relationship columns exist in the
 excel file.
