@@ -448,7 +448,7 @@ def upload(metadata, connectDict, names, url):
                             else:
                                 linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": connection_name}
                         else:
-                            logging.error("There is an accession %s in %s but not in %s. Please make sure all the connections are valid accessions." % (linkDict[header][Acsn][connection_name], header, LinkTo))
+                            logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." % (Acsn, header, linkDict[header][Acsn][connection_name]. linkDict[header][Acsn][connection_name], LinkTo))
                             sys.exit(1)
                     else:
                         logging.warning("%s is not a valid accession. %s %s relationship %s is not established." % (linkDict[header][Acsn][connection_name], header, Acsn, connection_name))
