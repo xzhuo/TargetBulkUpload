@@ -263,12 +263,13 @@ def multi_excel2JSON(file, allfields, fieldname):
                     print("field name in excel not in the database!")
                 else:
                     value = sheet.cell(row_index, col_index).value
+                    ctype = sheet.cell(row_index, col_index).ctype
                     if subkey == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or value != 'NA' or subkey == "sysaccession":
                         if subkeytype == "string":
                             d[subkey] = str(value).rstrip()  # use string for now. May use number later.
-                        elif subkeytype == "date":
+                        elif subkeytype == "date" and ctype == 3:
                             # ipdb.set_trace()
                             d[subkey] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
