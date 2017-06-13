@@ -29,8 +29,8 @@ You can use it to:
 	* To update data in the database, fill in all the columns appliable along with the "system accession" in the database.
 	* To update existing data, you can assign a unique "user accession" or leave "user accession" column blank.
 	* If both "systerm accession" and "user accession" are used, both of them can be used to establish relationship.
-	* All the date in the excel can be a date type in excel format, or a string in format "YYYY-MM-DD". Don't worry if excel changed date format, it means it is a correct date type.
-	* The relationship columns are labeled with a different color on the right side in each sheet. It should be either a "user accession" in the same excel file or a existing "system accession" in the database.
+	* All the date in the excel can be a date type in excel format, or a string in format "YYYY-MM-DD". Don't worry if excel changed date format automatically, it means excel knows it is a date.
+	* The relationship columns are labeled with a different color on the right side in each sheet. It should be either a "user accession" in the same excel file or an existing "system accession" in the database.
 3. Run it with following command in test mode:
 ```
 python3 submission.py -k <API key> -x <excel file>
