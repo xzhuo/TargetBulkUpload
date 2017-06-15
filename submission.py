@@ -416,10 +416,8 @@ def upload(metadata, connectDict, names, url):
                             logging.error("POST request failed!")
                             sys.exit(1)
                         else:
-                            print("accesion created is %s" % Acsn)
                             linkDict[header][Acsn] = tempDict
                             AcsnDict[header][tempAcsn] = Acsn
-                            print("%s upload done without link\n" % (tempAcsn))
                             print("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
 
     # ipdb.set_trace()
