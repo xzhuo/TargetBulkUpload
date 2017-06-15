@@ -21,7 +21,7 @@ You can use it to:
 	* Log in with your user name and password.
 	* Click "Show API key"
 	* copy your API key string
-2. Fill in the excel template accordingly.
+2. Fill in the excel template accordingly. Please use the correct template. You have to use the template in the repo. Don't rename the template; if you have to rename it, keep the version number intact in the name.
 	* To upload new data, leave "system accession" column blank.
 	* "User accession" can be used to establish relationships with other records in the same excel files. If you need to establish relationships between records, please fill in "user accession" according to our accession rule (you can find the rule at the head of each excel sheet).
 	* "User accession" must be unique within a excel file. But you can use the same "user accession" again in another excel file in another batch of upload.
