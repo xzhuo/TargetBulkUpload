@@ -24,7 +24,7 @@ You can use it to:
 2. Fill in the excel template accordingly. Please use the correct template. You have to use the template in the repo. Don't rename the template; if you have to rename it, keep the version number intact in the name.
 	* To upload new data, leave "system accession" column blank.
 	* "User accession" can be used to establish relationships with other records in the same excel files. If you need to establish relationships between records, please fill in "user accession" according to our accession rule (you can find the rule at the head of each excel sheet).
-	* "User accession" must be unique within a excel file. But you can use the same "user accession" again in another excel file in another batch of upload.
+	* "User accession" must be unique within an excel file. But you can use the same "user accession" again in another excel file in another batch of upload.
 	* You can leave "user accession" blank if you don't need to establish relationship for that record.
 	* To update data in the database, fill in all the columns appliable along with the "system accession" in the database.
 	* To update existing data, you can assign a unique "user accession" or leave "user accession" column blank.

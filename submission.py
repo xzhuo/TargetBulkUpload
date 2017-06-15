@@ -456,8 +456,11 @@ def upload(metadata, connectDict, names, url):
                     responsestatus = request(linkurl, json.dumps(linkBody), 'POST')
                     if responsestatus == 200:
                         print("%s relationships successfully linked!" % (Acsn))
+                    elif(linkDict[header][Acsn][connection_name].startswith("TRGT") or linkDict[header][Acsn][connection_name].startswith("USR")):
+                        logging.error("%s relationships is not linked, seems like an error!" % (Acsn))
+                        sys.exit(1)
                     else:
-                        logging.warning("%s relationships is not linked!" % (Acsn))
+                        logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
 
 
 def getfields():
