@@ -13,8 +13,10 @@ import ipdb  # for debug
 
 my_token = 'tokenstring'
 bearer_token = 'bearer ' + my_token
-url = 'http://meta.target.wustl.edu'
-testurl = 'http://target.wustl.edu:8006'
+url_meta = 'http://meta.target.wustl.edu'
+url_submit = 'http://submit.target.wustl.edu'
+testurl_meta = 'http://target.wustl.edu:8006'
+testurl_submit = 'http://target.wustl.edu:8002'
 
 # hard code version for now, will get it from a url latter:
 versionNo = {"version": "2.0.2"}
@@ -54,6 +56,14 @@ def get_args():
         required=True,
         help="User's API key. Required.",
     )
+    parser.add_argument(
+        '--mode',
+        '-m',
+        choices=['upload','update'],
+        dest="mode",
+        default='upload',
+        help="Run mode. If the mode is 'upload' (default), only records without systerm accession and without matching user accession with be posted to the database. All the records with system accession in the excel with be ignored. For records without system accession but have user accessions, the user accession will be compared with all records in the database. If a matching user accession found in the database, the record will be ignored. If the run mode is 'update', it will complain with an error if no matching system accesion is found in the database."
+        )
     return parser.parse_args()
 
 
@@ -62,8 +72,15 @@ def main():
     if args.token:
         global bearer_token
         bearer_token = 'bearer ' + args.token
-    allfields = urlfields('schema', testurl)
-    relationshipDict = urlfields('relationships', testurl)
+        token_url = testurl_submit + '/api/usertoken/' + args.token
+        # user_name_dict = request(token_url)
+        global user_name
+        user_name = request(token_url)["username"]
+    else:
+        sys.exit("please provide a user API key!")  # make token argument mandatory. 
+    print(user_name)
+    allfields = urlfields('schema', testurl_meta)
+    relationshipDict = urlfields('relationships', testurl_meta)
     if versionNo["version"] not in args.excel:
         logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
         sys.exit(1)
@@ -93,7 +110,7 @@ def main():
         sys.exit(1)
         # submission = excel2JSON(args.excel, allfields, fieldname)
     elif args.tem == "V2":
-        submission = multi_excel2JSON(args.excel, allfields, fieldname)
+        submission = multi_excel2JSON(args.excel, allfields, fieldname, args.mode)
     elif args.tem == "json":
         with open(args.excel) as data_file:
             submission_in = json.load(data_file)
@@ -127,9 +144,9 @@ def main():
     print(json.dumps(submission, indent=4, sort_keys=True))
     accession_check(submission)
     if args.notest:
-        upload(submission, connectDict, names, url)
+        upload(submission, connectDict, names, url_meta, args.mode)
     else:
-        upload(submission, connectDict, names, testurl)
+        upload(submission, connectDict, names, testurl_meta, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, now you can upload the same file to real database with the '--notest' flag.")
 
 
@@ -225,7 +242,7 @@ def main():
 #     return json.loads(j)
 
 
-def multi_excel2JSON(file, allfields, fieldname):
+def multi_excel2JSON(file, allfields, fieldname, mode):
     wb = xlrd.open_workbook(file)
     sheet_names = wb.sheet_names()
     super_data = OrderedDict()
@@ -266,9 +283,11 @@ def multi_excel2JSON(file, allfields, fieldname):
                     print("field name %s from %s in excel is not in the database!" % (Subkey, key))
                 else:
                     value = sheet.cell(row_index, col_index).value
-                    if subkey == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession. So 
-                        randomid = uuid.uuid1()
-                        value = accession_rule + str(randomid)
+                    if mode == "upload":
+                        if subkey == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession. So 
+                            randomid = uuid.uuid1()
+                            value = accession_rule + str(randomid)
+
                     if subkey == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or subkey == "sysaccession":
@@ -294,9 +313,12 @@ def multi_excel2JSON(file, allfields, fieldname):
     return super_data
 
 
-def request(url, parameter, method):
-    bin_data = parameter.encode('ascii')
-    req = urllib.request.Request(url, data=bin_data, method=method)
+def request(url, parameter="", method=""):
+    if parameter == "" and method == "":  # a GET request
+        req = urllib.request.Request(url,method="GET")
+    else:
+        bin_data = parameter.encode('ascii')
+        req = urllib.request.Request(url, data=bin_data, method=method)
     req.add_header('Content-Type', 'application/json')
     req.add_header('Accept', 'application/json')
     req.add_header('Authorization', bearer_token)  # add token 'bearer hed35h5i1ajf07g5'
@@ -312,11 +334,13 @@ def request(url, parameter, method):
         sys.exit(1)
 
     else:
-            ResponseDict = json.loads(response.read().decode('ascii'))
-            if "accession" in ResponseDict:
-                return ResponseDict["accession"]
-            else:
-                return ResponseDict["statusCode"]
+        ResponseDict = json.loads(response.read().decode('ascii'))
+        if "accession" in ResponseDict:
+            return ResponseDict["accession"]
+        elif len(ResponseDict) == 1:  # should have only one item.
+            return ResponseDict
+        else:
+            return ResponseDict["statusCode"]
 
 
 def accession_check(metadata):  # if there is duplicated user accession number.
@@ -342,7 +366,7 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                 sys.exit(1)
 
 
-def upload(metadata, connectDict, names, url):
+def upload(metadata, connectDict, names, url, mode):
     AcsnDict = {}
     linkDict = {}
 
@@ -363,62 +387,101 @@ def upload(metadata, connectDict, names, url):
             fullurl = url + '/api/' + names[header]
             if header not in connectDict or len(connectDict[header]) == 0:  # if nothing to connect in the database during bulk upload
                 for entry in metadata[header]:  # metadata[header] is a list of dicts.
-                    if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
-                        Acsn = entry.pop("sysaccession")
-                        if "user_accession" in entry and len(entry["user_accession"]) > 0:
-                            tempAcsn = entry["user_accession"]
+                    if mode == "update":  # if it is update mode: system accession required!
+                        if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
+                            Acsn = entry.pop("sysaccession")
+                            if "user_accession" in entry and len(entry["user_accession"]) > 0:
+                                tempAcsn = entry["user_accession"]
+                            else:
+                                tempAcsn = Acsn
+                            updateurl = fullurl + '/' + Acsn
+                            request(updateurl, json.dumps(entry), 'POST')
+                            print("record %s has been updated!" % Acsn)
+                            AcsnDict[header][tempAcsn] = Acsn
                         else:
-                            tempAcsn = Acsn
-                        updateurl = fullurl + '/' + Acsn
-                        request(updateurl, json.dumps(entry), 'POST')
-                        print("record %s has been updated!" % Acsn)
-                        AcsnDict[header][tempAcsn] = Acsn
-                    else:
-                        tempAcsn = entry["user_accession"]
-                        if "sysaccession" in entry:
-                            entry.pop("sysaccession")
-                        Acsn = request(fullurl, json.dumps(entry), 'POST')
-                        AcsnDict[header][tempAcsn] = Acsn
-                        # print("%s upload done" % (tempAcsn))
-                        print("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
+                            print("Please provide system accession for %s if you want to update it! %s" % entry["user_accession"])
+                    if mode == "upload":  # if it is upload mode: skip records with system accession. skip records with user accession that match one in database.
+                        if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
+                            continue
+                        else:
+                            tempAcsn = entry["user_accession"]
+                            if "sysaccession" in entry:
+                                entry.pop("sysaccession")
+                            existing = request(fullurl)
+                            # check if user_accession and user combination in the database.
+                            if not names[header] in existing:
+                                print("error getting records from database")
+                                sys.exit(1)
+                            redundant_user_accession = 0
+                            for DB_entries in existing[names[header]]:
+                                if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+                                    print("Seems record %s is already in the database!" % tempAcsn)
+                                    redundant_user_accession = 1
+                                    continue
+                            if redundant_user_accession == 0:
+                                Acsn = request(fullurl, json.dumps(entry), 'POST')
+                                if Acsn is None:
+                                    logging.error("POST request failed!")
+                                    sys.exit(1)
+                                else:
+                                    AcsnDict[header][tempAcsn] = Acsn
+                                    print("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[header] = {}
                 for entry in metadata[header]:  # metadata[header] is a list of dicts.
-                    if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
-                        tempDict = {}
-                        Acsn = entry.pop("sysaccession")
-                        if "user_accession" in entry and len(entry["user_accession"]) > 0:
+                    if mode == "upload":
+                        if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
+                            continue
+                        else:
+                            # ipdb.set_trace()
+                            # check if user_accession and user combination in the database.
+                            tempDict = {}
                             tempAcsn = entry["user_accession"]
-                        else:
-                            tempAcsn = Acsn
-                        # tempAcsn = entry["user_accession"]
-                        for key in connectDict[header]:
-                            if key in entry:
-                                tempDict[key] = entry.pop(key)
-                        updateurl = fullurl + '/' + Acsn
-                        request(updateurl, json.dumps(entry), 'POST')
-                        print("record %s has been updated!" % Acsn)
-                        AcsnDict[header][tempAcsn] = Acsn
-                        linkDict[header][Acsn] = tempDict
-
-                    else:
-                        # ipdb.set_trace()
-                        tempDict = {}
-                        tempAcsn = entry["user_accession"]
-                        if "sysaccession" in entry:
-                            entry.pop("sysaccession")
-                        for key in connectDict[header]:
-                            if key in entry:
-                                tempDict[key] = entry.pop(key)
-                        Acsn = request(fullurl, json.dumps(entry), 'POST')
-                        if Acsn is None:
-                            logging.error("POST request failed!")
-                            sys.exit(1)
-                        else:
-                            linkDict[header][Acsn] = tempDict
+                            existing = request(fullurl)
+                            if not names[header] in existing:
+                                print("error getting records from database")
+                                sys.exit(1)
+                            redundant_user_accession = 0
+                            for DB_entries in existing[names[header]]:
+                                if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+                                    print("Seems record %s is already in the database!" % tempAcsn)
+                                    redundant_user_accession = 1
+                                    continue
+                            if redundant_user_accession == 0:
+                                if "sysaccession" in entry:
+                                    entry.pop("sysaccession")
+                                for key in connectDict[header]:
+                                    if key in entry:
+                                        tempDict[key] = entry.pop(key)
+                                Acsn = request(fullurl, json.dumps(entry), 'POST')
+                                if Acsn is None:
+                                    logging.error("POST request failed!")
+                                    sys.exit(1)
+                                else:
+                                    linkDict[header][Acsn] = tempDict
+                                    AcsnDict[header][tempAcsn] = Acsn
+                                    print("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
+                    if mode == "update":
+                        if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
+                            tempDict = {}
+                            Acsn = entry.pop("sysaccession")
+                            if "user_accession" in entry and len(entry["user_accession"]) > 0:
+                                tempAcsn = entry["user_accession"]
+                            else:
+                                tempAcsn = Acsn
+                            # tempAcsn = entry["user_accession"]
+                            for key in connectDict[header]:
+                                if key in entry:
+                                    tempDict[key] = entry.pop(key)
+                            updateurl = fullurl + '/' + Acsn
+                            request(updateurl, json.dumps(entry), 'POST')
+                            print("record %s has been updated!" % Acsn)
                             AcsnDict[header][tempAcsn] = Acsn
-                            print("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
+                            linkDict[header][Acsn] = tempDict
+                        else:
+                            print("Please provide system accession for %s if you want to update it! " % entry["user_accession"])
+
 
     # ipdb.set_trace()
     print("all the record uploaded, it is time to connect all the relationships!\n")
