@@ -11,8 +11,6 @@ import uuid  # used to generate unique user accesion if it is not provided.
 from socket import timeout
 import ipdb  # for debug
 
-my_token = 'tokenstring'
-bearer_token = 'bearer ' + my_token
 url_meta = 'http://meta.target.wustl.edu'
 url_submit = 'http://submit.target.wustl.edu'
 testurl_meta = 'http://target.wustl.edu:8006'
@@ -31,7 +29,8 @@ def get_args():
         dest="tem",
         choices=['V1', 'V2', 'json'],
         default='V2',
-        help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet. V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.',
+        help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet.\
+         V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.',
     )
     parser.add_argument(
         '--excel',
@@ -46,7 +45,10 @@ def get_args():
         '-n',
         action="store_true",
         dest="notest",
-        help='test flag. default option is true, which will submit all the metadata to the test database. The metadata only goes to product database if this option is false. Our recommended practice is use TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the metadata successfully submitted to test database.',
+        help='test flag. default option is true, which will submit all the metadata to the test database. \
+        The metadata only goes to product database if this option is false. Our recommended practice is use \
+        TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
+        metadata successfully submitted to test database.',
     )
     parser.add_argument(
         '--tokenkey',
@@ -62,7 +64,12 @@ def get_args():
         choices=['upload','update'],
         dest="mode",
         default='upload',
-        help="Run mode. If the mode is 'upload' (default), only records without systerm accession and without matching user accession with be posted to the database. All the records with system accession in the excel with be ignored. For records without system accession but have user accessions, the user accession will be compared with all records in the database. If a matching user accession found in the database, the record will be ignored. If the run mode is 'update', it will complain with an error if no matching system accesion is found in the database."
+        help="Run mode. If the mode is 'upload' (default), only records without systerm accession and without \
+        matching user accession with be posted to the database. All the records with system accession in the \
+        excel with be ignored. For records without system accession but have user accessions, the user accession \
+        will be compared with all records in the database. If a matching user accession found in the database, the \
+        record will be ignored. If the run mode is 'update', it will complain with an error if no matching system \
+        accesion is found in the database."
         )
     return parser.parse_args()
 
@@ -70,59 +77,55 @@ def get_args():
 def main():
     args = get_args()
     if args.token:
-        global bearer_token
         bearer_token = 'bearer ' + args.token
         token_url = testurl_submit + '/api/usertoken/' + args.token
         # user_name_dict = request(token_url)
-        global user_name
         user_name = request(token_url)["username"]
     else:
         sys.exit("please provide a user API key!")  # make token argument mandatory. 
-    print(user_name)
-    allfields = urlfields('schema', testurl_meta)
-    relationshipDict = urlfields('relationships', testurl_meta)
+    schema_json = urlfields('schema', testurl_meta)
+    relationship_json = urlfields('relationships', testurl_meta)
     if versionNo["version"] not in args.excel:
         logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
         sys.exit(1)
-    connectDict = {}
-    fieldname = {}  # display_name: name for connection fields
-    names = {}
-    for Header in relationshipDict:
-        if Header in relationshipDict and 'one' in relationshipDict[Header]:
-            # connectDict[Header] = {}
-            # fieldname[Header] = {}
-            names[Header] = relationshipDict[Header]['all']
-            if 'connections' in relationshipDict[Header]:
-                connectDict[Header] = {x['name']: x['to'] for x in relationshipDict[Header]['connections'] if 'to' in x}  # include experiment connections
-                # connectDict[Header] = {x['name']: x['to'] for x in relationshipDict[Header]['connections'] if 'to' in x and x['to'] != 'experiment'}  # exclude experiment connections
-                fieldname[Header] = {x['display_name']: x['name'] for x in relationshipDict[Header]['connections'] if 'display_name' in x}
+    relationship_connectto = {}  # relationship_name: table_name for connection fields.  {'Bioproject': {'works_on': 'lab'},...}
+    ColumnnameToRelationship = {}  # display_column_name: relationship_name for connection fields.  {'Bioproject': {'Lab': 'works_on'},...}
+    SheetToTable = {}  #excel file work sheet name to database table name correlation. {Assay:assays,...}
+    for Table in relationship_json:
+        if Table in relationship_json and 'one' in relationship_json[Table]:
+            # relationship_connectto[Table] = {}
+            # ColumnnameToRelationship[Table] = {}
+            SheetToTable[Table] = relationship_json[Table]['all']
+            if 'connections' in relationship_json[Table]:
+                relationship_connectto[Table] = {x['name']: x['to'] for x in relationship_json[Table]['connections'] if 'to' in x}  # include experiment connections
+                # relationship_connectto[Table] = {x['name']: x['to'] for x in relationship_json[Table]['connections'] if 'to' in x and x['to'] != 'experiment'}  # exclude experiment connections
+                ColumnnameToRelationship[Table] = {x['display_name']: x['name'] for x in relationship_json[Table]['connections'] if 'display_name' in x}
 
-    schemarelationshipname = {}  # display_name: name for allfields
-    for Header in allfields:
-        print(Header)
-        if Header in fieldname:
-            schemarelationshipname[Header] = {**{x['text']: x['name'] for x in allfields[Header] if 'text' in x}, **fieldname[Header]}  # require python3.5 or later.
+    ColumnnameToAllfields = {}  # display_name: name for schema_json, all items with or without relationships. {'Assay': {'Assay protocol': 'assay_protocol',...},...}
+    for Table in schema_json:
+        print(Table)
+        if Table in ColumnnameToRelationship:
+            ColumnnameToAllfields[Table] = {**{x['text']: x['name'] for x in schema_json[Table] if 'text' in x}, **ColumnnameToRelationship[Table]}  # require python3.5 or later.
         else:
-            schemarelationshipname[Header] = {x['text']: x['name'] for x in allfields[Header] if 'text' in x}
-
+            ColumnnameToAllfields[Table] = {x['text']: x['name'] for x in schema_json[Table] if 'text' in x}
     if args.tem == "V1":
         print("excel template Version 1 is no longer supported, please download and fill in metadata using the latest template.")
         sys.exit(1)
-        # submission = excel2JSON(args.excel, allfields, fieldname)
+        # submission = excel2JSON(args.excel, schema_json, ColumnnameToRelationship)
     elif args.tem == "V2":
-        submission = multi_excel2JSON(args.excel, allfields, fieldname, args.mode)
+        submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode)
     elif args.tem == "json":
         with open(args.excel) as data_file:
             submission_in = json.load(data_file)
             submission = dict()
-            for header in submission_in:
-                submission[header] = list()
-                for acc in submission_in[header]:
+            for table in submission_in:
+                submission[table] = list()
+                for acc in submission_in[table]:  # acc for accession
                     if acc != "NA":
-                        if "User Accession" in submission_in[header][acc]:
-                            submission_in[header][acc]["User accession"] = submission_in[header][acc].pop("User Accession")
-                        # submission[header][acc] = {schemarelationshipname[header][key]: value for (key, value) in submission[header][acc].items()}
-                        submission[header].append({schemarelationshipname[header][key]: value for (key, value) in submission_in[header][acc].items()})
+                        if "User Accession" in submission_in[table][acc]:
+                            submission_in[table][acc]["User accession"] = submission_in[table][acc].pop("User Accession")
+                        # submission[table][acc] = {ColumnnameToAllfields[table][key]: value for (key, value) in submission[table][acc].items()}
+                        submission[table].append({ColumnnameToAllfields[table][key]: value for (key, value) in submission_in[table][acc].items()})
 
                     # for subkey in submission[key][acc]:
                     #     if subkey == "User Accession":
@@ -130,9 +133,9 @@ def main():
                     #     if subkey in schemafieldname[key]:
                     #         submission[key][acc][schemafieldname[key][subkey]] = submission[key][acc].pop(subkey)
                     #         # replace subkey: value to schemafieldname[key][subkey]: value
-                    #     elif subkey in fieldname[key]:
-                    #         # replace subkey: value to fieldname[key][subkey]: value
-                    #         submission[key][acc][fieldname[key][subkey]] = submission[key][acc].pop(subkey)
+                    #     elif subkey in ColumnnameToRelationship[key]:
+                    #         # replace subkey: value to ColumnnameToRelationship[key][subkey]: value
+                    #         submission[key][acc][ColumnnameToRelationship[key][subkey]] = submission[key][acc].pop(subkey)
                     #     # elif subkey == "User Accession" or subkey == "User accession":
                     #     #     submission[key][acc]["user_accession"] = submission[key][acc].pop(subkey)
                     #     else:
@@ -144,168 +147,77 @@ def main():
     print(json.dumps(submission, indent=4, sort_keys=True))
     accession_check(submission)
     if args.notest:
-        upload(submission, connectDict, names, url_meta, args.mode)
+        upload(submission, relationship_connectto, SheetToTable, url_meta, user_name, bearer_token, args.mode)
     else:
-        upload(submission, connectDict, names, testurl_meta, args.mode)
-        print("If you did not find errors above, all the records were successfully uploaded to the testing database, now you can upload the same file to real database with the '--notest' flag.")
+        upload(submission, relationship_connectto, SheetToTable, testurl_meta, user_name, bearer_token, args.mode)
+        print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
+            now you can upload the same file to real database with the '--notest' flag.")
 
 
-# Excel to JSON module write by Ananda
-# def excel2JSON(metadata_file, allfields, fieldname):
-#     header = ["Lab", "Bioproject", "Litter", "Mouse", "Diet", "Treatment", "Biosample", "Library", "Assay", "Reagent", "File"]  # file.readlines()
-#     num_head_lines = len(header)
-#     wb = xlrd.open_workbook(metadata_file)
-#     sh = wb.sheet_by_index(0)
-#     numrows = sh.nrows
-#     j = 0
-#     header_line = []
-#     intermediate_rows = []
-#     # num_cols = [10, 5, 11, 15, 7, 18, 25, 11, 16, 11, 29]  # no longer need this now
-
-#     for i in range(0, numrows):
-#         if(j < num_head_lines and sh.cell(i, 0).value == header[j].rstrip()):
-#             header_line.append(i)
-#             if(j > 0):
-#                 intermediate_rows.append(i - header_line[j - 1] - 1)
-#             j += 1
-
-#     intermediate_rows.append(i - header_line[j - 1])
-#     super_data = OrderedDict()
-#     for i in range(0, num_head_lines):
-#         data_list = []
-#         pointer = header_line[i]
-#         hr = pointer + 1
-#         key = str(sh.cell_value(pointer, 0)).rstrip()  # Xiaoyu: remove trailing white spaces
-#         for j in range(1, intermediate_rows[i]):
-#             data = OrderedDict()
-#             row_values = sh.row_values(hr + j)
-#             valuelength = 0
-#             for value in row_values:
-#                 valuelength += len(str(value))
-#             if valuelength == 0:
-#                 continue
-#             k = 0
-#             while len(str(sh.cell(hr, k).value).rstrip()):
-#                 # for k in range(0, num_cols[i]):
-#                 Subkey = str(sh.cell(hr, k).value).rstrip()
-#                 # Lot ID and Exposure Classification
-#                 subkey = "NA"
-#                 subkeytype = "unknown"
-#                 if Subkey == "Accession":
-#                     subkey = "User Accession"
-#                     subkeytype = "string"
-#                 if Subkey == "Litter size (survived)":
-#                     Subkey = "Litter size (survived to weaning)"
-#                 for fielddict in allfields[key]:
-#                     if fielddict["text"] == Subkey:
-#                         subkey = fielddict["name"]
-#                         subkeytype = fielddict["type"]
-#                 # subkey = Subkey[:1].lower() + Subkey[1:]  # first character lowercase
-#                 if subkey == "NA" and key in fieldname and Subkey in fieldname[key]:
-#                     subkey = fieldname[key][Subkey]
-#                     subkeytype = "string"
-#                 # subkeytype = "string"  # wait until the correct type set!! Temporary line here
-#                 if subkey == "NA":
-#                     logging.warning(key)
-#                     logging.warning(Subkey)
-#                     logging.warning("field name in excel not in the database!")
-#                 else:
-#                     value = row_values[k]
-#                     if len(value) == 0 and subkey != 'sysaccession':
-#                         value = 'NA'
-#                     if subkeytype == "number":
-#                         try:
-#                             data[subkey] = int(value)
-#                         except:
-#                             data[subkey] = -1
-#                     # elif subkeytype == "date":
-#                     #     data[subkey] =
-#                     else:
-#                         data[subkey] = str(value)
-
-#                     # if isinstance(value, float):
-#                     #     if subkey.endswith('Id'):
-#                     #         data[subkey] = str(value)
-#                     #     else:
-#                     #         data[subkey] = int(value)
-#                     # else:
-#                     #     data[subkey] = str(value)
-#                     # data[subkey] = row_values[k]
-#                 k += 1
-#             data_list.append(data)
-
-#         super_data[key] = data_list
-#     j = json.dumps(super_data)
-#     # with open('TaRGET_metadata.json', 'w') as f:
-#     #     f.write(j)
-#     print("Excel processing DONE")
-#     return json.loads(j)
-
-
-def multi_excel2JSON(file, allfields, fieldname, mode):
+def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
     wb = xlrd.open_workbook(file)
     sheet_names = wb.sheet_names()
     super_data = OrderedDict()
-    for key in sheet_names:
-        if key == "Instructions" or key == "Lists":
+    for Sheet in sheet_names:
+        if Sheet == "Instructions" or Sheet == "Lists":
             continue
-        sheet = wb.sheet_by_name(key)
-        keys = [str(sheet.cell(1, col_index).value).rstrip() for col_index in range(sheet.ncols)]  # start from row number 1 to skip header
+        sheet = wb.sheet_by_name(Sheet)
+        columns = [str(sheet.cell(1, col_index).value).rstrip() for col_index in range(sheet.ncols)]  # start from row number 1 to skip header
         dict_list = []
         for row_index in range(2, sheet.nrows):
-            # d = {keys[col_index]: str(sheet.cell(row_index, col_index).value.rstrip()) for col_index in range(sheet.ncols)}  # use string first
+            # d = {columns[col_index]: str(sheet.cell(row_index, col_index).value.rstrip()) for col_index in range(sheet.ncols)}  # use string first
             d = OrderedDict()
             for col_index in range(sheet.ncols):
-                Subkey = keys[col_index]
-                subkey = "NA"
-                subkeytype = "unknown"
-                if Subkey == "System Accession":
-                    subkey = "sysaccession"
-                    subkeytype = "string"
-                if Subkey == "User Accession":
-                    Subkey = "User accession"
-                    subkeytype = "string"
-                for fielddict in allfields[key]:
-                    if fielddict["text"] == Subkey:
-                        subkey = fielddict["name"]
-                        subkeytype = fielddict["type"]
+                Column_name = columns[col_index]
+                column_name = "NA"
+                data_type = "unknown"
+                if Column_name == "System Accession":
+                    column_name = "sysaccession"
+                    data_type = "string"
+                if Column_name == "User Accession":
+                    Column_name = "User accession"
+                    data_type = "string"
+                for fielddict in schema_json[Sheet]:
+                    if fielddict["text"] == Column_name:
+                        column_name = fielddict["name"]
+                        data_type = fielddict["type"]
                     if fielddict["text"] == "User accession":
                         accession_rule = fielddict["placeholder"][:-4]
-                # subkey = Subkey[:1].lower() + Subkey[1:]  # first character lowercase
-                if subkey == "NA" and key in fieldname and Subkey in fieldname[key]:
-                    subkey = fieldname[key][Subkey]
-                    subkeytype = "string"
+                # column_name = Column_name[:1].lower() + Column_name[1:]  # first character lowercase
+                if column_name == "NA" and Sheet in ColumnnameToRelationship and Column_name in ColumnnameToRelationship[Sheet]:
+                    column_name = ColumnnameToRelationship[Sheet][Column_name]
+                    data_type = "string"
 
-                if subkey == "zip_code" or subkey == "batchId":
-                    subkeytype = "string"
-                # subkeytype = "string"  # wait until the correct type set!! Temporary line here
-                if subkey == "NA":
-                    print("field name %s from %s in excel is not in the database!" % (Subkey, key))
+                if column_name == "zip_code" or column_name == "batchId":
+                    data_type = "string"
+                # data_type = "string"  # wait until the correct type set!! Temporary line here
+                if column_name == "NA":
+                    print("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
                     if mode == "upload":
-                        if subkey == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession. So 
+                        if column_name == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession. So 
                             randomid = uuid.uuid1()
                             value = accession_rule + str(randomid)
 
-                    if subkey == "strand_specificity":
+                    if column_name == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
-                    if value != '' or subkey == "sysaccession":
+                    if value != '' or column_name == "sysaccession":
                         ctype = sheet.cell(row_index, col_index).ctype
-                        if subkeytype == "string":
-                            d[subkey] = str(value).rstrip()  # use string for now. May use number later.
-                        elif subkeytype == "date" and ctype == 3:
+                        if data_type == "string":
+                            d[column_name] = str(value).rstrip()  # use string for now. May use number later.
+                        elif data_type == "date" and ctype == 3:
                             # ipdb.set_trace()
-                            d[subkey] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
+                            d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
-                            d[subkey] = value
+                            d[column_name] = value
             if d["user_accession"].startswith(accession_rule):
                 dict_list.append(d)
             else:
-                logging.error("There has to be a valid user accession in %s" % key)
+                logging.error("There has to be a valid user accession in %s" % Sheet)
                 sys.exit(1)
 
-        super_data[key] = dict_list
+        super_data[Sheet] = dict_list
 
     # j = json.dumps(super_data)
     print("Excel processing DONE")
@@ -313,7 +225,7 @@ def multi_excel2JSON(file, allfields, fieldname, mode):
     return super_data
 
 
-def request(url, parameter="", method=""):
+def request(url, parameter="", method="",bearer_token=""):
     if parameter == "" and method == "":  # a GET request
         req = urllib.request.Request(url,method="GET")
     else:
@@ -321,7 +233,7 @@ def request(url, parameter="", method=""):
         req = urllib.request.Request(url, data=bin_data, method=method)
     req.add_header('Content-Type', 'application/json')
     req.add_header('Accept', 'application/json')
-    req.add_header('Authorization', bearer_token)  # add token 'bearer hed35h5i1ajf07g5'
+    req.add_header('Authorization', bearer_token)
     try:
         response = urllib.request.urlopen(req, timeout=10)
     except urllib.error.URLError as e:
@@ -366,27 +278,27 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                 sys.exit(1)
 
 
-def upload(metadata, connectDict, names, url, mode):
+def upload(metadata, relationship_connectto, SheetToTable, url,user_name, bearer_token, mode):
     AcsnDict = {}
     linkDict = {}
 
     orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File"]
-    for header in orderList:
-        print(header)
-        if header in metadata:
+    for Sheet in orderList:
+        print(Sheet)
+        if Sheet in metadata:
             # swap column name in excel to field name in database
-            # for entry in metadata[header]:
-            #     print(header)
+            # for entry in metadata[Sheet]:
+            #     print(Sheet)
             #     for key in entry:
             #         print(key)
-            #         if header in fieldname and key in fieldname[header]:
-            #             entry[fieldname[header][key]] = entry.pop(key)
+            #         if Sheet in ColumnnameToRelationship and key in ColumnnameToRelationship[Sheet]:
+            #             entry[ColumnnameToRelationship[Sheet][key]] = entry.pop(key)
             #             # del entry[key]
 
-            AcsnDict[header] = {}
-            fullurl = url + '/api/' + names[header]
-            if header not in connectDict or len(connectDict[header]) == 0:  # if nothing to connect in the database during bulk upload
-                for entry in metadata[header]:  # metadata[header] is a list of dicts.
+            AcsnDict[Sheet] = {}
+            fullurl = url + '/api/' + SheetToTable[Sheet]
+            if Sheet not in relationship_connectto or len(relationship_connectto[Sheet]) == 0:  # if nothing to connect in the database during bulk upload
+                for entry in metadata[Sheet]:  # metadata[Sheet] is a list of dicts.
                     if mode == "update":  # if it is update mode: system accession required!
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             Acsn = entry.pop("sysaccession")
@@ -395,11 +307,11 @@ def upload(metadata, connectDict, names, url, mode):
                             else:
                                 tempAcsn = Acsn
                             updateurl = fullurl + '/' + Acsn
-                            request(updateurl, json.dumps(entry), 'POST')
+                            request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             print("record %s has been updated!" % Acsn)
-                            AcsnDict[header][tempAcsn] = Acsn
+                            AcsnDict[Sheet][tempAcsn] = Acsn
                         else:
-                            print("Please provide system accession for %s if you want to update it! %s" % entry["user_accession"])
+                            print("Please provide system accession for %s if you want to update it!" % entry["user_accession"])
                     if mode == "upload":  # if it is upload mode: skip records with system accession. skip records with user accession that match one in database.
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             continue
@@ -409,27 +321,28 @@ def upload(metadata, connectDict, names, url, mode):
                                 entry.pop("sysaccession")
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
-                            if not names[header] in existing:
+                            if not SheetToTable[Sheet] in existing:
                                 print("error getting records from database")
                                 sys.exit(1)
                             redundant_user_accession = 0
-                            for DB_entries in existing[names[header]]:
+                            for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
                                     print("Seems record %s is already in the database!" % tempAcsn)
+                                    AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
                                     redundant_user_accession = 1
                                     continue
                             if redundant_user_accession == 0:
-                                Acsn = request(fullurl, json.dumps(entry), 'POST')
+                                Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                                 if Acsn is None:
                                     logging.error("POST request failed!")
                                     sys.exit(1)
                                 else:
-                                    AcsnDict[header][tempAcsn] = Acsn
+                                    AcsnDict[Sheet][tempAcsn] = Acsn
                                     print("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
-                linkDict[header] = {}
-                for entry in metadata[header]:  # metadata[header] is a list of dicts.
+                linkDict[Sheet] = {}
+                for entry in metadata[Sheet]:  # metadata[Sheet] is a list of dicts.
                     if mode == "upload":
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             continue
@@ -439,28 +352,31 @@ def upload(metadata, connectDict, names, url, mode):
                             tempDict = {}
                             tempAcsn = entry["user_accession"]
                             existing = request(fullurl)
-                            if not names[header] in existing:
+                            if not SheetToTable[Sheet] in existing:
                                 print("error getting records from database")
                                 sys.exit(1)
                             redundant_user_accession = 0
-                            for DB_entries in existing[names[header]]:
+                            for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
                                     print("Seems record %s is already in the database!" % tempAcsn)
                                     redundant_user_accession = 1
+                                    Acsn = DB_entries["accession"]
+                                    linkDict[Sheet][Acsn] = tempDict
+                                    AcsnDict[Sheet][tempAcsn] = Acsn
                                     continue
                             if redundant_user_accession == 0:
                                 if "sysaccession" in entry:
                                     entry.pop("sysaccession")
-                                for key in connectDict[header]:
+                                for key in relationship_connectto[Sheet]:
                                     if key in entry:
                                         tempDict[key] = entry.pop(key)
-                                Acsn = request(fullurl, json.dumps(entry), 'POST')
+                                Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                                 if Acsn is None:
                                     logging.error("POST request failed!")
                                     sys.exit(1)
                                 else:
-                                    linkDict[header][Acsn] = tempDict
-                                    AcsnDict[header][tempAcsn] = Acsn
+                                    linkDict[Sheet][Acsn] = tempDict
+                                    AcsnDict[Sheet][tempAcsn] = Acsn
                                     print("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
                     if mode == "update":
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
@@ -471,55 +387,55 @@ def upload(metadata, connectDict, names, url, mode):
                             else:
                                 tempAcsn = Acsn
                             # tempAcsn = entry["user_accession"]
-                            for key in connectDict[header]:
+                            for key in relationship_connectto[Sheet]:
                                 if key in entry:
                                     tempDict[key] = entry.pop(key)
                             updateurl = fullurl + '/' + Acsn
-                            request(updateurl, json.dumps(entry), 'POST')
+                            request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             print("record %s has been updated!" % Acsn)
-                            AcsnDict[header][tempAcsn] = Acsn
-                            linkDict[header][Acsn] = tempDict
+                            AcsnDict[Sheet][tempAcsn] = Acsn
+                            linkDict[Sheet][Acsn] = tempDict
                         else:
                             print("Please provide system accession for %s if you want to update it! " % entry["user_accession"])
 
 
     # ipdb.set_trace()
     print("all the record uploaded, it is time to connect all the relationships!\n")
-    for header in orderList:
-        if header in linkDict:
-            fullurl = url + '/api/' + names[header]
-            for Acsn in linkDict[header]:
-                for connection_name in linkDict[header][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
-                    # regex connection_name here. if true, use it directly, otherwise use connectDict[header][connection_name]:  I don't understand the comment now.
-                    # linkTo = AcsnDict[header][connectDict[header][connection_name]]
-                    # if linkDict[header][Acsn][connection_name] == 'NA':
+    for Sheet in orderList:
+        if Sheet in linkDict:
+            fullurl = url + '/api/' + SheetToTable[Sheet]
+            for Acsn in linkDict[Sheet]:
+                for connection_name in linkDict[Sheet][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
+                    # regex connection_name here. if true, use it directly, otherwise use relationship_connectto[Sheet][connection_name]:  I don't understand the comment now.
+                    # linkTo = AcsnDict[Sheet][relationship_connectto[Sheet][connection_name]]
+                    # if linkDict[Sheet][Acsn][connection_name] == 'NA':
                     #     continue
-                    linkTo = connectDict[header][connection_name]
+                    linkTo = relationship_connectto[Sheet][connection_name]
                     LinkTo = linkTo[:1].upper() + linkTo[1:]
                     linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
-                    if linkDict[header][Acsn][connection_name].startswith("TRGT"):
-                        if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
-                            # linkBody = {names[linkTo]['Acsn']: linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
-                            linkBody = {"connectionAcsn": linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
-                        else:
-                            linkBody = {"connectionAcsn": linkDict[header][Acsn][connection_name], "connectionName": connection_name}
-                    elif linkDict[header][Acsn][connection_name].startswith("USR"):
+                    if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
+                        linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
+                    elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):
                         # ipdb.set_trace()
-                        if linkDict[header][Acsn][connection_name] in AcsnDict[LinkTo]:
-                            if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
-                                # linkBody = {names[linkTo]['Acsn']: linkDict[header][Acsn][connection_name], "connectionName": "assay_input"}
-                                linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": "assay_input"}
-                            else:
-                                linkBody = {"connectionAcsn": AcsnDict[LinkTo][linkDict[header][Acsn][connection_name]], "connectionName": connection_name}
-                        else:
-                            logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." % (Acsn, header, linkDict[header][Acsn][connection_name], linkDict[header][Acsn][connection_name], LinkTo))
+                        linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
+                        if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
+                            logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
+                             (Acsn, Sheet, linkDict[Sheet][Acsn][connection_name], linkDict[Sheet][Acsn][connection_name], LinkTo))
                             sys.exit(1)
                     else:
-                        logging.warning("%s is not a valid accession. %s %s relationship %s is not established." % (linkDict[header][Acsn][connection_name], header, Acsn, connection_name))
-                    responsestatus = request(linkurl, json.dumps(linkBody), 'POST')
+                        logging.warning("%s is not a valid accession. %s %s relationship %s is not established." % 
+                            (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
+
+                    if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
+                        # linkBody = {SheetToTable[linkTo]['Acsn']: linkDict[Sheet][Acsn][connection_name], "connectionName": "assay_input"}
+                        linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": "assay_input"}
+                    else:
+                        linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": connection_name}
+
+                    responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
                     if responsestatus == 200:
-                        print("%s relationships successfully linked!" % (Acsn))
-                    elif(linkDict[header][Acsn][connection_name].startswith("TRGT") or linkDict[header][Acsn][connection_name].startswith("USR")):
+                        print("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
+                    elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
                         logging.error("%s relationships is not linked, seems like an error!" % (Acsn))
                         sys.exit(1)
                     else:
@@ -528,8 +444,8 @@ def upload(metadata, connectDict, names, url, mode):
 
 def getfields():
     allfieldnames = {}
-    for header in ("assay", "bioproject", "biosample", "challenge", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
-        filename = 'fields/' + header + '.js'
+    for table in ("assay", "bioproject", "biosample", "challenge", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
+        filename = 'fields/' + table + '.js'
         string = '[{'
         with open(filename, mode='r', encoding='utf-8') as f:
             for line in f:
@@ -545,24 +461,24 @@ def getfields():
                             line = '"' + line[:index] + '"' + line[index:]
                     string = string + line
         string = string + '}]'
-        Header = header[:1].upper() + header[1:]
-        allfieldnames[Header] = json.loads(string)
+        Table = table[:1].upper() + table[1:]
+        allfieldnames[Table] = json.loads(string)
     return allfieldnames
 
 
 def urlfields(kind, url):
     allfieldnames = {}
-    for header in ("assay", "bioproject", "biosample", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
+    for table in ("assay", "bioproject", "biosample", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
         if kind == 'schema':
-            urljson = url + '/schema/' + header + '.json'
+            urljson = url + '/schema/' + table + '.json'
         elif kind == 'relationships':
-            urljson = url + '/schema/relationships/' + header + '.json'
-        Header = header[:1].upper() + header[1:]
+            urljson = url + '/schema/relationships/' + table + '.json'
+        Table = table[:1].upper() + table[1:]
         print(urljson)
         data = urllib.request.urlopen(urljson).read().decode('utf8')
         # str_data = data.readall().decode('utf-8')
         data = json.loads(data)
-        allfieldnames[Header] = data['data']
+        allfieldnames[Table] = data['data']
 
     return allfieldnames
 
