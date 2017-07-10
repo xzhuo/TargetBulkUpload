@@ -1,6 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2017-07-10
+### changes committed
+* Add 'upload' and 'update' modes for the script.
+* Rename some variables for clarity.
+* Prompt user to confirm before post data during --notest mode.
+* Post submission details to a separate url.
+* Code aesthetic stuff.
+* Grammar edits by Erica.
+
 ## [0.2.0] - 2017-06-13
 ### changes committed
 * Add 10 seconds timeout to post request, and print a proper warning message after timeout.
