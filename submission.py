@@ -294,7 +294,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     AcsnDict = {}
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
-    saved_submission_url = url_submit + "/submissions"
+    saved_submission_url = url_submit + "/api/submission"
     orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File"]
     for Sheet in orderList:
         print("\n")
@@ -365,7 +365,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             redundant_user_accession = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    print("Seems record %s provided by %s already exists in the database. If %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession.\nOr leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
+                                    print("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
                                     AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
                                     redundant_user_accession = 1
                                     continue
@@ -403,7 +403,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             redundant_user_accession = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    print("Seems record %s provided by %s already exists in the database. If %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession.\nOr leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
+                                    print("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
                                     redundant_user_accession = 1
                                     Acsn = DB_entries["accession"]
                                     linkDict[Sheet][Acsn] = tempDict
@@ -488,11 +488,12 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
                     elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):
                         # ipdb.set_trace()
-                        linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
                         if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
                             logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
                                           (Acsn, Sheet, linkDict[Sheet][Acsn][connection_name], linkDict[Sheet][Acsn][connection_name], LinkTo))
                             sys.exit(1)
+                        else:
+                            linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
                     else:
                         logging.warning("%s is not a valid accession. %s %s relationship %s is not established." %
                                         (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
@@ -511,8 +512,9 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         sys.exit(1)
                     else:
                         logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
+    submission_details = {"details": json.dumps(submission_log)}
     ipdb.set_trace()
-    submitted_logs = request(saved_submission_url, json.dumps(submission_log), 'POST', bearer_token)
+    submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
 
 
 def getfields():
