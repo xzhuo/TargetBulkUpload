@@ -17,7 +17,7 @@ testurl_meta = 'http://target.wustl.edu:8006'
 testurl_submit = 'http://target.wustl.edu:8002'
 
 # hard code version for now, will get it from a url latter:
-versionNo = {"version": "2.0.2"}
+versionNo = {"version": "2.0"}
 
 
 def get_args():
