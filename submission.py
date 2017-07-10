@@ -82,6 +82,7 @@ def main():
         # user_name_dict = request(token_url)
         user_name = request(token_url)["username"]
     else:
+        logging.error("please provide a user API key!")
         sys.exit("please provide a user API key!")  # make token argument mandatory.
     schema_json = urlfields('schema', testurl_meta)
     relationship_json = urlfields('relationships', testurl_meta)
@@ -109,7 +110,7 @@ def main():
         else:
             ColumnnameToAllfields[Table] = {x['text']: x['name'] for x in schema_json[Table] if 'text' in x}
     if args.tem == "V1":
-        print("excel template Version 1 is no longer supported, please download and fill in metadata using the latest template.")
+        logging.error("excel template Version 1 is no longer supported, please download and fill in metadata using the latest template.")
         sys.exit(1)
         # submission = excel2JSON(args.excel, schema_json, ColumnnameToRelationship)
     elif args.tem == "V2":
@@ -204,7 +205,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                     data_type = "string"
                 # data_type = "string"  # wait until the correct type set!! Temporary line here
                 if column_name == "NA":
-                    print("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
+                    logging.warning("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
                     if mode == "upload":
@@ -327,27 +328,27 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             else:
                                 submission_log[SheetToTable[Sheet]] = []
                                 submission_log[SheetToTable[Sheet]].append(Acsn)
-                            print("record %s has been updated!" % Acsn)
+                            logging.info("record %s has been updated!" % Acsn)
                             AcsnDict[Sheet][tempAcsn] = Acsn
                         elif "user_accession" in entry and len(entry["user_accession"]) > 0:
                             tempAcsn = entry["user_accession"]
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
                             if not SheetToTable[Sheet] in existing:
-                                print("error getting records from database")
+                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 sys.exit(1)
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
                                     AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
                                     userAcc_found = 1
-                                    print("%s has been assigned with system accession %s. It won't be updated because you did not provide the system accession in the excel, but you can still link other records to it by calling %s!" % (tempAcsn, DB_entries["accession"], tempAcsn))
+                                    logging.info("%s has been assigned with system accession %s. It won't be updated because you did not provide the system accession in the excel, but you can still link other records to it by calling %s!" % (tempAcsn, DB_entries["accession"], tempAcsn))
                                     continue
                             if not userAcc_found:
-                                print("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
+                                logging.warning("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
 
                         else:
-                            print("all rows without syster accession or user accession will be ignored during update!")
+                            logging.warning("all rows without syster accession or user accession will be ignored during update!")
                     if mode == "upload":  # if it is upload mode: skip records with system accession. skip records with user accession that match one in database.
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             tempAcsn = entry["user_accession"]
@@ -360,12 +361,12 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
                             if not SheetToTable[Sheet] in existing:
-                                print("error getting records from database")
+                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 sys.exit(1)
                             redundant_user_accession = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    print("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
+                                    logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
                                     AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
                                     redundant_user_accession = 1
                                     continue
@@ -381,7 +382,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                     else:
                                         submission_log[SheetToTable[Sheet]] = []
                                         submission_log[SheetToTable[Sheet]].append(Acsn)
-                                    print("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
+                                    logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[Sheet] = {}
@@ -398,12 +399,12 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             tempAcsn = entry["user_accession"]
                             existing = request(fullurl)
                             if not SheetToTable[Sheet] in existing:
-                                print("error getting records from database")
+                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 sys.exit(1)
                             redundant_user_accession = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    print("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
+                                    logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
                                     redundant_user_accession = 1
                                     Acsn = DB_entries["accession"]
                                     linkDict[Sheet][Acsn] = tempDict
@@ -427,7 +428,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                     else:
                                         submission_log[SheetToTable[Sheet]] = []
                                         submission_log[SheetToTable[Sheet]].append(Acsn)
-                                    print("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
+                                    logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
                     if mode == "update":
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             tempDict = {}
@@ -442,7 +443,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                     tempDict[key] = entry.pop(key)
                             updateurl = fullurl + '/' + Acsn
                             request(updateurl, json.dumps(entry), 'POST', bearer_token)
-                            print("record %s has been updated!" % Acsn)
+                            logging.info("record %s has been updated!" % Acsn)
                             AcsnDict[Sheet][tempAcsn] = Acsn
                             linkDict[Sheet][Acsn] = tempDict
                             if SheetToTable[Sheet] in submission_log:
@@ -455,20 +456,20 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
                             if not SheetToTable[Sheet] in existing:
-                                print("error getting records from database")
+                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 sys.exit(1)
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
                                     AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
                                     userAcc_found = 1
-                                    print("%s has been assigned with system accession %s. It won't be updated because you did not provide the system accession in the excel, but you can still link other records to it by calling %s!" % (tempAcsn, DB_entries["accession"], tempAcsn))
+                                    logging.info("%s has been assigned with system accession %s. It won't be updated because you did not provide the system accession in the excel, but you can still link other records to it by calling %s!" % (tempAcsn, DB_entries["accession"], tempAcsn))
                                     continue
                             if not userAcc_found:
-                                print("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
+                                logging.warning("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
 
                         else:
-                            print("all rows without syster accession or user accession will be ignored during update!")
+                            logging.warning("all rows without syster accession or user accession will be ignored during update!")
 
     # ipdb.set_trace()
     print("all the record uploaded/updated, it is time to connect all the relationships!\n")
@@ -506,7 +507,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
 
                     responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
                     if responsestatus == 200:
-                        print("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
+                        logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
                     elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
                         logging.error("%s relationships is not linked, seems like an error!" % (Acsn))
                         sys.exit(1)
@@ -515,6 +516,10 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     submission_details = {"details": json.dumps(submission_log)}
     ipdb.set_trace()
     submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
+    if submitted_logs == 201:
+        logging.info("Submission has been successfully saved!")
+    else:
+        logging.error("Fail to save submission!")
 
 
 def getfields():
