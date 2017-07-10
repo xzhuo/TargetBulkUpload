@@ -224,10 +224,19 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                             d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
                             d[column_name] = value
-            if d["user_accession"].startswith(accession_rule):
-                dict_list.append(d)
+            if mode == "upload":
+                if d["user_accession"].startswith(accession_rule):
+                    dict_list.append(d)
+                else:
+                    logging.error("There has to be a valid user accession in %s" % Sheet)
+                    sys.exit(1)
+            elif mode == "update":
+                if d["sysaccession"].startswith("TRGT"):
+                    dict_list.append(d)
+                else:
+                    logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
             else:
-                logging.error("There has to be a valid user accession in %s" % Sheet)
+                logging.error("no mode defined! Has to be either upload or update")
                 sys.exit(1)
 
         all_sheets[Sheet] = dict_list
@@ -318,7 +327,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             Acsn = entry.pop("sysaccession")
                             if "user_accession" in entry and len(entry["user_accession"]) > 0:
-                                tempAcsn = entry["user_accession"]
+                                tempAcsn = entry.pop("user_accession")  # Don't update user_accession
                             else:
                                 tempAcsn = Acsn
                             updateurl = fullurl + '/' + Acsn
@@ -348,7 +357,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                 logging.warning("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
 
                         else:
-                            logging.warning("all rows without syster accession or user accession will be ignored during update!")
+                            logging.warning("all rows without system accession or user accession will be ignored during update!")
                     if mode == "upload":  # if it is upload mode: skip records with system accession. skip records with user accession that match one in database.
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             tempAcsn = entry["user_accession"]
@@ -434,7 +443,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             tempDict = {}
                             Acsn = entry.pop("sysaccession")
                             if "user_accession" in entry and len(entry["user_accession"]) > 0:
-                                tempAcsn = entry["user_accession"]
+                                tempAcsn = entry.pop("user_accession")  # Don't update user_accession
                             else:
                                 tempAcsn = Acsn
                             # tempAcsn = entry["user_accession"]
@@ -514,7 +523,6 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                     else:
                         logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
     submission_details = {"details": json.dumps(submission_log)}
-    ipdb.set_trace()
     submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
     if submitted_logs == 201:
         logging.info("Submission has been successfully saved!")
