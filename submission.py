@@ -296,7 +296,7 @@ def accession_check(metadata):  # if there is duplicated user accession number.
                     logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (user_accession, key))
                     sys.exit(1)
             else:
-                logging.error("system failed to generate a user accession. It is a bug. Seems there is at least one row in %s does not have accession." % (key))
+                logging.error("system failed to generate a user accession. It is a bug. Seems there is at least one row in %s does not have any accession." % (key))
                 sys.exit(1)
 
 
