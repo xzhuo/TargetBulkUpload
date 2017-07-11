@@ -21,7 +21,7 @@ versionNo = {"version": "2.0"}
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='simple arguments')
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         '--template',
         '-t',
@@ -30,7 +30,7 @@ def get_args():
         choices=['V1', 'V2', 'json'],
         default='V2',
         help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet.\
-         V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.',
+         V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.\n',
     )
     parser.add_argument(
         '--excel',
@@ -38,7 +38,7 @@ def get_args():
         action="store",
         dest="excel",
         required=True,
-        help='The excel used for bulk upload. Required.',
+        help='The excel used for bulk upload. Required.\n',
     )
     parser.add_argument(
         '--notest',
@@ -48,7 +48,7 @@ def get_args():
         help='test flag. default option is true, which will submit all the metadata to the test database. \
         The metadata only goes to product database if this option is false. Our recommended practice is use \
         TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
-        metadata successfully submitted to test database.',
+        metadata successfully submitted to test database.\n',
     )
     parser.add_argument(
         '--tokenkey',
@@ -56,7 +56,7 @@ def get_args():
         action="store",
         dest="token",
         required=True,
-        help="User's API key. Required.",
+        help="User's API key. Required.\n",
     )
     parser.add_argument(
         '--mode',
@@ -69,7 +69,21 @@ def get_args():
         excel with be ignored. For records without system accession but have user accessions, the user accession \
         will be compared with all records in the database. If a matching user accession found in the database, the \
         record will be ignored. If the run mode is 'update', it will complain with an error if no matching system \
-        accesion is found in the database."
+        accesion is found in the database.\n"
+    )
+    parser.add_argument(
+        '--saveUserAccession',
+        '-u',
+        action="store_true",
+        dest="useracc",
+        help="During upload whether or not save user accession in the excel sheet. This flag has no effect in update mode.\
+        Don't use this flag if:\
+        your user accession in the excel file is temporary; You only use user accession to link records in the excel file;\n\
+        You may have some row without a user accession; You can make sure every row in the excel file is a new\
+        record you need to upload to the database. \
+        Use the -u flag if:\
+        You need to save user accession information in our database; You are keeping a record of all your data,\
+        all your records submitted to our database, in the excel file and future submission have unique user accession.\n"
     )
     return parser.parse_args()
 
@@ -146,15 +160,16 @@ def main():
                     #         print(subkey)
 
     print(json.dumps(submission, indent=4, sort_keys=True))
-    accession_check(submission)
     if args.notest:
         print("This is serious: you are going to upload you data to the real database!")
         prompt = input('Are you sure your excel file is correct and you want to proceed? (Yes or No)    ')
         if prompt == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
+            accession_check(submission, url_meta, args.mode, args.saveUserAccession)
             upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         else:
             prompt_test = input('Hmm, How about test run your excel file using our test database? (Yes or No)?    ')
             if prompt_test == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
+                accession_check(submission, url_meta, args.mode, args.saveUserAccession)
                 upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
                 print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
                     now you can upload the same file to real database with the '--notest' flag.")
@@ -162,6 +177,8 @@ def main():
                 sys.exit("quit")
 
     else:
+        accession_check(submission, testurl_meta, SheetToTable, args.mode, args.saveUserAccession)
+        print(json.dumps(submission, indent=4, sort_keys=True))
         upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
             now you can upload the same file to real database with the '--notest' flag.")
@@ -277,27 +294,112 @@ def request(url, parameter="", method="", bearer_token=""):
             return ResponseDict["statusCode"]
 
 
-def accession_check(metadata):  # if there is duplicated user accession number.
-    for key in metadata:
-        accessionlist = []
-        for i in metadata[key]:
-            if "user_accession" in i:
-                user_accession = i["user_accession"]
-                if user_accession not in accessionlist:
-                    accessionlist.append(user_accession)
+def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is duplicated user accession number.
+    if mode == "upload":  # user_accession exits always.
+        if acc_save:
+            for Sheet in metadata:
+                table = SheetToTable[Sheet]
+                fullurl = url + '/api/' + table
+                existing = request(fullurl)
+                existing_user_accession = [x['user_accession'] for x in existing[table]]
+                accessionlist = []
+                # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
+                delete_i = []  # Hold all index to be deleted.
+                for i, records in enumerate(metadata[Sheet]):
+                    user_accession = records["user_accession"]
+                    if user_accession not in accessionlist:
+                        if user_accession not in existing_user_accession:
+                            accessionlist.append(user_accession)
+                        else:
+                            existing_sys_acc = [x['accession'] for x in existing[table] if x['user_accession'] == user_accession]
+                            logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
+                            delete_i.append(i)
+                            # if replace == 1:
+                            #     logging.warning("Replace %s in %s with a new user accession." % (user_accession, Sheet))
+                            #     replace_accession(metadata, user_accession)
+                            # elif replace == 2:
+                            #     # delete current record
+                            #     delete_i.append(i)
+                            # else:
+                            #     prompt = input('Here are your options:\n1) submit %s as a new record to the database anyway;\n2) submit all the rows in the excel with redundant user accession to database as new records;\n'
+                            #                    '3) skip %s because it has been submitted before;\n4) skip all rows with redundant user accession.\n\n'
+                            #                    'Please type 1 or 2 or 3 or 4:    ' % (user_accession, user_accession))
+                            #     if prompt == '1':
+                            #         logging.warning("Ok, I will replace %s in %s with a new accession." % (user_accession, Sheet))
+                            #         replace_accession(metadata, user_accession)
+                            #     elif prompt == '2':
+                            #         confirm_prompt = input("Are you sure all your data in the excel are new records? If you can confirm, all the following redundant records in the excel will be automatically uploaded.\n\
+                            #             Please typle Yes or No:    ")
+                            #         if confirm_prompt == "Yes" or confirm_prompt == "yes" or confirm_prompt == "Y" or confirm_prompt == "y":
+                            #             logging.warning("Replace %s in %s with a new user accession." % user_accession, Sheet)
+                            #             replace_accession(metadata, user_accession)
+                            #             replace = 1
+                            #         else:
+                            #             logging.warning("Ok, I will only replace %s in the submission with a new user accession." % user_accession)
+                            #             replace_accession(metadata, user_accession)
+                            #     elif prompt == '3':
+                            #         # delete this record
+                            #         delete_i.append(i)
+                            #     elif prompt == '4':
+                            #         # delete this record
+                            #         logging.warning("Ok, always skip the row with redundant user accession!")
+                            #         delete_i.append(i)
+                            #         replace = 2
+                            #     else:
+                            #         logging.error("Please provide valid response! (1,2,3,4)")
+                            #         sys.exit(1)
+
+                    else:
+                        logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
+                        sys.exit(1)
+                for i in sorted(delete_i, key=int, reverse=True):
+                    logging.warning("Skip %s in %s!" % (metadata[Sheet][i]['user_accession'], Sheet))
+                    metadata[Sheet].pop(i)
+        else:
+            for Sheet in metadata:
+                table = SheetToTable[Sheet]
+                accessionlist = []
+                # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
+                for i, records in enumerate(metadata[Sheet]):
+                    user_accession = records["user_accession"]
+                    if user_accession not in accessionlist:
+                            accessionlist.append(user_accession)
+                            replace_accession(metadata, user_accession)
+                    else:
+                        logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
+                        sys.exit(1)
+
+    elif mode == "update":
+        for Sheet in metadata:
+            accessionlist = []
+            for records in metadata[Sheet]:
+                if "sysaccession" in records:
+                    sys_accession = records["sysaccession"]
+                    if sys_accession not in accessionlist:
+                        accessionlist.append(sys_accession)
+                    else:
+                        logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (sys_accession, Sheet))
+                        sys.exit(1)
                 else:
-                    logging.error("duplicated user accession %s in %s!" % (user_accession, key))
+                    logging.error("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
                     sys.exit(1)
-            elif "sysaccession" in i:
-                user_accession = i["sysaccession"]
-                if user_accession not in accessionlist:
-                    accessionlist.append(user_accession)
-                else:
-                    logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (user_accession, key))
-                    sys.exit(1)
-            else:
-                logging.error("system failed to generate a user accession. It is a bug. Seems there is at least one row in %s does not have any accession." % (key))
-                sys.exit(1)
+                if "user_accession" in records:
+                    user_accession = records["user_accession"]
+                    if user_accession not in accessionlist:
+                        accessionlist.append(sys_accession)
+                    else:
+                        logging.error("duplicated user accession %s in %s! You don't need to enter user accession during update." % (sys_accession, Sheet))
+                        sys.exit(1)
+
+
+def replace_accession(metadata, user_accession):
+    randomid = uuid.uuid1()
+    new_accession = user_accession[:-4] + str(randomid)
+    for Sheet in metadata:
+        for i, row in enumerate(metadata[Sheet]):
+            for key in row:
+                if row[key] == user_accession:
+                    metadata[Sheet][i][key] = new_accession
 
 
 def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
