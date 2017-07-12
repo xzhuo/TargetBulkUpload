@@ -89,6 +89,7 @@ def get_args():
 
 
 def main():
+    logging.getLogger().setLevel(logging.INFO)  # Do I need a flag to change this?
     args = get_args()
     if args.token:
         bearer_token = 'bearer ' + args.token
@@ -118,7 +119,7 @@ def main():
 
     ColumnnameToAllfields = {}  # display_name: name for schema_json, all items with or without relationships. {'Assay': {'Assay protocol': 'assay_protocol',...},...}
     for Table in schema_json:
-        print(Table)
+        logging.debug(Table)
         if Table in ColumnnameToRelationship:
             ColumnnameToAllfields[Table] = {**{x['text']: x['name'] for x in schema_json[Table] if 'text' in x}, **ColumnnameToRelationship[Table]}  # require python3.5 or later.
         else:
@@ -128,7 +129,7 @@ def main():
         sys.exit(1)
         # submission = excel2JSON(args.excel, schema_json, ColumnnameToRelationship)
     elif args.tem == "V2":
-        submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode)
+        submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode, args.useracc)
     elif args.tem == "json":
         with open(args.excel) as data_file:
             submission_in = json.load(data_file)
@@ -159,17 +160,17 @@ def main():
                     #         print(key)
                     #         print(subkey)
 
-    print(json.dumps(submission, indent=4, sort_keys=True))
+    logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest:
         print("This is serious: you are going to upload you data to the real database!")
         prompt = input('Are you sure your excel file is correct and you want to proceed? (Yes or No)    ')
         if prompt == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-            accession_check(submission, url_meta, args.mode, args.saveUserAccession)
+            accession_check(submission, url_meta, args.mode, args.useracc)
             upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         else:
             prompt_test = input('Hmm, How about test run your excel file using our test database? (Yes or No)?    ')
             if prompt_test == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-                accession_check(submission, url_meta, args.mode, args.saveUserAccession)
+                accession_check(submission, url_meta, args.mode, args.useracc)
                 upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
                 print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
                     now you can upload the same file to real database with the '--notest' flag.")
@@ -177,14 +178,14 @@ def main():
                 sys.exit("quit")
 
     else:
-        accession_check(submission, testurl_meta, SheetToTable, args.mode, args.saveUserAccession)
-        print(json.dumps(submission, indent=4, sort_keys=True))
+        accession_check(submission, testurl_meta, SheetToTable, args.mode, args.useracc)
+        logging.debug(json.dumps(submission, indent=4, sort_keys=True))
         upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
             now you can upload the same file to real database with the '--notest' flag.")
 
 
-def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
+def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save):
     wb = xlrd.open_workbook(file)
     sheet_names = wb.sheet_names()
     all_sheets = OrderedDict()
@@ -227,8 +228,8 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                     value = sheet.cell(row_index, col_index).value
                     if mode == "upload":
                         if column_name == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession.
-                            randomid = uuid.uuid1()
-                            value = accession_rule + str(randomid)
+                            # randomid = uuid.uuid1()
+                            value = 'NA'  # accession_rule + str(randomid)
 
                     if column_name == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
@@ -242,11 +243,21 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                         else:
                             d[column_name] = value
             if mode == "upload":
-                if d["user_accession"].startswith(accession_rule):
-                    dict_list.append(d)
+                if acc_save:
+                    if d["user_accession"].startswith(accession_rule):
+                        dict_list.append(d)
+                    else:
+                        logging.error("There has to be a valid user accession in %s" % Sheet)
+                        sys.exit(1)
                 else:
-                    logging.error("There has to be a valid user accession in %s" % Sheet)
-                    sys.exit(1)
+                    if d["user_accession"].startswith(accession_rule):
+                        dict_list.append(d)
+                    elif d["user_accession"] == 'NA':
+                        randomid = uuid.uuid1()
+                        d["user_accession"] = accession_rule + str(randomid)
+                    else:
+                        logging.error("There has to be a valid user accession in %s" % Sheet)
+                        sys.exit(1)
             elif mode == "update":
                 if d["sysaccession"].startswith("TRGT"):
                     dict_list.append(d)
@@ -307,13 +318,22 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is
                 delete_i = []  # Hold all index to be deleted.
                 for i, records in enumerate(metadata[Sheet]):
                     user_accession = records["user_accession"]
-                    if user_accession not in accessionlist:
+                    if user_accession == 'NA':
+                        logging.error("please provide user accession for all rows in %s" % Sheet)
+                        sys.exit(1)
+                    elif user_accession not in accessionlist:
                         if user_accession not in existing_user_accession:
                             accessionlist.append(user_accession)
                         else:
                             existing_sys_acc = [x['accession'] for x in existing[table] if x['user_accession'] == user_accession]
                             logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
-                            delete_i.append(i)
+                            if len(existing_sys_acc) == 1:
+                                replace_accession(metadata, user_accession, existing_sys_acc[0])
+                            else:
+                                logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
+                                sys.exit(1)
+                            # delete_i.append(i)
+
                             # if replace == 1:
                             #     logging.warning("Replace %s in %s with a new user accession." % (user_accession, Sheet))
                             #     replace_accession(metadata, user_accession)
@@ -392,9 +412,10 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is
                         sys.exit(1)
 
 
-def replace_accession(metadata, user_accession):
-    randomid = uuid.uuid1()
-    new_accession = user_accession[:-4] + str(randomid)
+def replace_accession(metadata, user_accession, new_accession=""):
+    if new_accession == "":
+        randomid = uuid.uuid1()
+        new_accession = user_accession[:8] + str(randomid)
     for Sheet in metadata:
         for i, row in enumerate(metadata[Sheet]):
             for key in row:
@@ -409,7 +430,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     saved_submission_url = url_submit + "/api/submission"
     orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File"]
     for Sheet in orderList:
-        print("\n")
+        print("\nworking on: ")
         print(Sheet)
         if Sheet in metadata:
             # swap column name in excel to field name in database
@@ -615,7 +636,6 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": "assay_input"}
                     else:
                         linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": connection_name}
-
                     responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
                     if responsestatus == 200:
                         logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
@@ -664,7 +684,7 @@ def urlfields(kind, url):
         elif kind == 'relationships':
             urljson = url + '/schema/relationships/' + table + '.json'
         Table = table[:1].upper() + table[1:]
-        print(urljson)
+        logging.debug(urljson)
         data = urllib.request.urlopen(urljson).read().decode('utf8')
         # str_data = data.readall().decode('utf-8')
         data = json.loads(data)
