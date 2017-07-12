@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2017-07-12
+### changes committed
+* Add options with ```-u``` flag so users can decide whether save user accession or not.
+* Update readme with new options.
+* Bug fixes.
+
 ## [0.2.1] - 2017-07-10
 ### changes committed
 * Add 'upload' and 'update' modes for the script.
