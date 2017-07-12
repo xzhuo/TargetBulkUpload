@@ -82,7 +82,7 @@ def get_args():
         You may have some row without a user accession; You can make sure every row in the excel file is a new\
         record you need to upload to the database. \
         Use the -u flag if:\
-        You need to save user accession information in our database; You are keeping a record of all your data,\
+        You need to save user accession information in our database; You are keeping a record of all your data;\
         all your records submitted to our database, in the excel file and future submission have unique user accession.\n"
     )
     return parser.parse_args()
