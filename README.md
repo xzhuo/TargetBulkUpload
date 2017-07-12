@@ -31,7 +31,7 @@ Or You can click the "clone or download" button.
 * Click "Show API key".
 * Copy your API key string.
 
-### Decide what do you want to "user accession" column in the excel file
+### Decide what do you want to do with the "user accession" column in the excel file
 Before fill in the excel template, you must decide how do you want to use "user accession" column.  
 User accession can be used as a temporary accession to link different records and establish relationships. In this case, the user accessions you entered in the excel will be removed once your records get their system accessions.  
 
