@@ -32,10 +32,10 @@ Or You can click the "clone or download" button.
 * Copy your API key string.
 
 ### Decide what do you want to do with the "user accession" column in the excel file
-Before fill in the excel template, you must decide how do you want to use "user accession" column.  
+Before fill in the excel template, you must decide how do you want to use the "user accession" column.  
 User accession can be used as a temporary accession to link different records and establish relationships. In this case, the user accessions you entered in the excel will be removed once your records get their system accessions.  
 
-The user accession can also have actural meaning to you and you want to save your user accession in your database. In this case, please make sure all your records have unique user accessions.  
+The user accession can also have actural meaning to you and you want to save your user accession in our database. In this case, please make sure all your records have unique user accessions.  
 
 * Summary: 
 Don't use the ```-u``` flag if:
@@ -46,7 +46,6 @@ Don't use the ```-u``` flag if:
 
 Always use the ```-u``` flag if:
 	* You need to save user accession information in our database;
-	* You are keeping a record of all your data;
 	* all your records you have submitted, you are submitting, and you are going to submit must have unique user accessions.
 
 ### If you want to upload new data to the metadata database
