@@ -165,12 +165,12 @@ def main():
         print("This is serious: you are going to upload you data to the real database!")
         prompt = input('Are you sure your excel file is correct and you want to proceed? (Yes or No)    ')
         if prompt == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-            accession_check(submission, url_meta, args.mode, args.useracc)
+            accession_check(submission, url_meta, args.mode, args.useracc, user_name)
             upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         else:
             prompt_test = input('Hmm, How about test run your excel file using our test database? (Yes or No)?    ')
             if prompt_test == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-                accession_check(submission, url_meta, args.mode, args.useracc)
+                accession_check(submission, url_meta, args.mode, args.useracc, user_name)
                 upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
                 print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
                     now you can upload the same file to real database with the '--notest' flag.")
@@ -178,7 +178,7 @@ def main():
                 sys.exit("quit")
 
     else:
-        accession_check(submission, testurl_meta, SheetToTable, args.mode, args.useracc)
+        accession_check(submission, testurl_meta, SheetToTable, args.mode, args.useracc, user_name)
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
         upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
@@ -226,10 +226,9 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                     logging.warning("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
-                    if mode == "upload":
-                        if column_name == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession.
-                            # randomid = uuid.uuid1()
-                            value = 'NA'  # accession_rule + str(randomid)
+                    if column_name == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession.
+                        # randomid = uuid.uuid1()
+                        value = 'NA'  # accession_rule + str(randomid)
 
                     if column_name == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
@@ -305,17 +304,28 @@ def request(url, parameter="", method="", bearer_token=""):
             return ResponseDict["statusCode"]
 
 
-def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is duplicated user accession number.
+def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # if there is duplicated user accession number.
     if mode == "upload":  # user_accession exits always.
         if acc_save:
             for Sheet in metadata:
                 table = SheetToTable[Sheet]
                 fullurl = url + '/api/' + table
                 existing = request(fullurl)
-                existing_user_accession = [x['user_accession'] for x in existing[table]]
+                # check if user_accession and user combination in the database.
+                # if not SheetToTable[Sheet] in existing:
+                #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+                #     sys.exit(1)
+                # redundant_user_accession = 0
+                # for DB_entries in existing[SheetToTable[Sheet]]:
+                #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+                #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\n" % (tempAcsn, DB_entries["user"], tempAcsn))
+                #         redundant_user_accession = 1
+                #         continue
+                # if redundant_user_accession == 0:
+                existing_user_accession = [x['user_accession'] for x in existing[table] if x["user"] == user_name]
                 accessionlist = []
                 # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
-                delete_i = []  # Hold all index to be deleted.
+                # delete_i = []  # Hold all index to be deleted.
                 for i, records in enumerate(metadata[Sheet]):
                     user_accession = records["user_accession"]
                     if user_accession == 'NA':
@@ -325,10 +335,11 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is
                         if user_accession not in existing_user_accession:
                             accessionlist.append(user_accession)
                         else:
-                            existing_sys_acc = [x['accession'] for x in existing[table] if x['user_accession'] == user_accession]
+                            existing_sys_acc = [x['accession'] for x in existing[table] if (x['user_accession'] == user_accession and x['user'] == user_name)]
                             logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
                             if len(existing_sys_acc) == 1:
-                                replace_accession(metadata, user_accession, existing_sys_acc[0])
+                                metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
+                                # replace_accession(metadata, user_accession, existing_sys_acc[0])
                             else:
                                 logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
                                 sys.exit(1)
@@ -372,9 +383,9 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is
                     else:
                         logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
                         sys.exit(1)
-                for i in sorted(delete_i, key=int, reverse=True):
-                    logging.warning("Skip %s in %s!" % (metadata[Sheet][i]['user_accession'], Sheet))
-                    metadata[Sheet].pop(i)
+                # for i in sorted(delete_i, key=int, reverse=True):
+                #     logging.warning("Skip %s in %s!" % (metadata[Sheet][i]['user_accession'], Sheet))
+                #     metadata[Sheet].pop(i)
         else:
             for Sheet in metadata:
                 table = SheetToTable[Sheet]
@@ -383,8 +394,8 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is
                 for i, records in enumerate(metadata[Sheet]):
                     user_accession = records["user_accession"]
                     if user_accession not in accessionlist:
-                            accessionlist.append(user_accession)
-                            replace_accession(metadata, user_accession)
+                        accessionlist.append(user_accession)
+                        replace_accession(metadata, user_accession)
                     else:
                         logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
                         sys.exit(1)
@@ -404,12 +415,13 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save):  # if there is
                     logging.error("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
                     sys.exit(1)
                 if "user_accession" in records:
-                    user_accession = records["user_accession"]
-                    if user_accession not in accessionlist:
-                        accessionlist.append(sys_accession)
-                    else:
-                        logging.error("duplicated user accession %s in %s! You don't need to enter user accession during update." % (sys_accession, Sheet))
-                        sys.exit(1)
+                    records.pop("user_accession")
+                    # user_accession = records["user_accession"]
+                    # if user_accession not in accessionlist:
+                    #     accessionlist.append(sys_accession)
+                    # else:
+                    #     logging.error("duplicated user accession %s in %s! You don't need to enter user accession during update." % (sys_accession, Sheet))
+                    #     sys.exit(1)
 
 
 def replace_accession(metadata, user_accession, new_accession=""):
@@ -462,7 +474,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                 submission_log[SheetToTable[Sheet]].append(Acsn)
                             logging.info("record %s has been updated!" % Acsn)
                             AcsnDict[Sheet][tempAcsn] = Acsn
-                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:
+                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:  # don't worry this block now, I have all user_accession popped in update during accession_check.
                             tempAcsn = entry["user_accession"]
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
@@ -490,31 +502,19 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             tempAcsn = entry["user_accession"]  # if user_accession does not exist in the excel, it will be automatically generated by uuid in upload mode. So, user_accession always exists here.
                             if "sysaccession" in entry:
                                 entry.pop("sysaccession")
-                            existing = request(fullurl)
-                            # check if user_accession and user combination in the database.
-                            if not SheetToTable[Sheet] in existing:
-                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+
+                            Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
+                            if Acsn is None:
+                                logging.error("POST request failed!")
                                 sys.exit(1)
-                            redundant_user_accession = 0
-                            for DB_entries in existing[SheetToTable[Sheet]]:
-                                if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
-                                    AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
-                                    redundant_user_accession = 1
-                                    continue
-                            if redundant_user_accession == 0:
-                                Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
-                                if Acsn is None:
-                                    logging.error("POST request failed!")
-                                    sys.exit(1)
+                            else:
+                                AcsnDict[Sheet][tempAcsn] = Acsn
+                                if SheetToTable[Sheet] in submission_log:
+                                    submission_log[SheetToTable[Sheet]].append(Acsn)
                                 else:
-                                    AcsnDict[Sheet][tempAcsn] = Acsn
-                                    if SheetToTable[Sheet] in submission_log:
-                                        submission_log[SheetToTable[Sheet]].append(Acsn)
-                                    else:
-                                        submission_log[SheetToTable[Sheet]] = []
-                                        submission_log[SheetToTable[Sheet]].append(Acsn)
-                                    logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
+                                    submission_log[SheetToTable[Sheet]] = []
+                                    submission_log[SheetToTable[Sheet]].append(Acsn)
+                                logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[Sheet] = {}
@@ -529,38 +529,38 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             # check if user_accession and user combination in the database.
                             tempDict = {}
                             tempAcsn = entry["user_accession"]
-                            existing = request(fullurl)
-                            if not SheetToTable[Sheet] in existing:
-                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+                            # existing = request(fullurl)
+                            # if not SheetToTable[Sheet] in existing:
+                            #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+                            #     sys.exit(1)
+                            # redundant_user_accession = 0
+                            # for DB_entries in existing[SheetToTable[Sheet]]:
+                            #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+                            #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
+                            #         redundant_user_accession = 1
+                            #         Acsn = DB_entries["accession"]
+                            #         linkDict[Sheet][Acsn] = tempDict
+                            #         AcsnDict[Sheet][tempAcsn] = Acsn
+                            #         continue
+                            # if redundant_user_accession == 0:
+                            if "sysaccession" in entry:
+                                entry.pop("sysaccession")
+                            for key in relationship_connectto[Sheet]:
+                                if key in entry:
+                                    tempDict[key] = entry.pop(key)
+                            Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
+                            if Acsn is None:
+                                logging.error("POST request failed!")
                                 sys.exit(1)
-                            redundant_user_accession = 0
-                            for DB_entries in existing[SheetToTable[Sheet]]:
-                                if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\nIf %s is a new record, please use a non-redundant user accession; or leave the user accession blank and let our system assign a new id." % (tempAcsn, DB_entries["user"], tempAcsn, tempAcsn))
-                                    redundant_user_accession = 1
-                                    Acsn = DB_entries["accession"]
-                                    linkDict[Sheet][Acsn] = tempDict
-                                    AcsnDict[Sheet][tempAcsn] = Acsn
-                                    continue
-                            if redundant_user_accession == 0:
-                                if "sysaccession" in entry:
-                                    entry.pop("sysaccession")
-                                for key in relationship_connectto[Sheet]:
-                                    if key in entry:
-                                        tempDict[key] = entry.pop(key)
-                                Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
-                                if Acsn is None:
-                                    logging.error("POST request failed!")
-                                    sys.exit(1)
+                            else:
+                                linkDict[Sheet][Acsn] = tempDict
+                                AcsnDict[Sheet][tempAcsn] = Acsn
+                                if SheetToTable[Sheet] in submission_log:
+                                    submission_log[SheetToTable[Sheet]].append(Acsn)
                                 else:
-                                    linkDict[Sheet][Acsn] = tempDict
-                                    AcsnDict[Sheet][tempAcsn] = Acsn
-                                    if SheetToTable[Sheet] in submission_log:
-                                        submission_log[SheetToTable[Sheet]].append(Acsn)
-                                    else:
-                                        submission_log[SheetToTable[Sheet]] = []
-                                        submission_log[SheetToTable[Sheet]].append(Acsn)
-                                    logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
+                                    submission_log[SheetToTable[Sheet]] = []
+                                    submission_log[SheetToTable[Sheet]].append(Acsn)
+                                logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
                     if mode == "update":
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             tempDict = {}
@@ -583,7 +583,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             else:
                                 submission_log[SheetToTable[Sheet]] = []
                                 submission_log[SheetToTable[Sheet]].append(Acsn)
-                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:
+                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:  # don't worry this block now, I have all user_accession popped in update during accession_check.
                             tempAcsn = entry["user_accession"]
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
@@ -644,7 +644,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         sys.exit(1)
                     else:
                         logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
-    submission_details = {"details": json.dumps(submission_log)}
+    submission_details = json.dumps({"details": submission_log})
     submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
     if submitted_logs == 201:
         logging.info("Submission has been successfully saved!")
