@@ -1,6 +1,12 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2017-07-14
+### changes committed
+* Rename ```-u``` flag to ```--saveacc``` and ```-s```.
+* Change ```-m``` to ```-update```. It is a boolean flag now. ```-m upload``` is replaced by FALSE (without the flag), ```-m update``` is replaced by TRUE (with ```--update``` flag).
+* Update readme with new options.
+
 ## [0.2.2] - 2017-07-12
 ### changes committed
 * Add options with ```-u``` flag so users can decide whether save user accession or not.
