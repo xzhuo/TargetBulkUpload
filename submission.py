@@ -59,21 +59,22 @@ def get_args():
         help="User's API key. Required.\n",
     )
     parser.add_argument(
-        '--mode',
-        '-m',
-        choices=['upload', 'update'],
+        '--update',
+        '-u',
+        action="store_true",
         dest="mode",
         default='upload',
-        help="Run mode. If the mode is 'upload' (default), only records without systerm accession and without \
+        help="Run mode. Without the flag (default), only records without systerm accession and without \
         matching user accession with be posted to the database. All the records with system accession in the \
         excel with be ignored. For records without system accession but have user accessions, the user accession \
         will be compared with all records in the database. If a matching user accession found in the database, the \
-        record will be ignored. If the run mode is 'update', it will complain with an error if no matching system \
-        accesion is found in the database.\n"
+        record will be ignored. If the '--update' flag is on, it will update records in the database match the given \
+        system accession (only update filled columns). it will complain with an error if no matching system \
+        accession is found in the database.\n"
     )
     parser.add_argument(
-        '--saveUserAccession',
-        '-u',
+        '--saveacc',
+        '-s',
         action="store_true",
         dest="useracc",
         help="During upload whether or not save user accession in the excel sheet. This flag has no effect in update mode.\
@@ -81,7 +82,7 @@ def get_args():
         your user accession in the excel file is temporary; You only use user accession to link records in the excel file;\n\
         You may have some row without a user accession; You can make sure every row in the excel file is a new\
         record you need to upload to the database. \
-        Use the -u flag if:\
+        Use the '--saveacc' flag if:\
         You need to save user accession information in our database; You are keeping a record of all your data;\
         all your records submitted to our database, in the excel file and future submission have unique user accession.\n"
     )
@@ -241,7 +242,12 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                             d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                         else:
                             d[column_name] = value
-            if mode == "upload":
+            if mode:
+                if d["sysaccession"].startswith("TRGT"):
+                    dict_list.append(d)
+                else:
+                    logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
+            else:
                 if acc_save:
                     if d["user_accession"].startswith(accession_rule):
                         dict_list.append(d)
@@ -257,14 +263,6 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                     else:
                         logging.error("There has to be a valid user accession in %s" % Sheet)
                         sys.exit(1)
-            elif mode == "update":
-                if d["sysaccession"].startswith("TRGT"):
-                    dict_list.append(d)
-                else:
-                    logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
-            else:
-                logging.error("no mode defined! Has to be either upload or update")
-                sys.exit(1)
 
         all_sheets[Sheet] = dict_list
 
@@ -305,7 +303,7 @@ def request(url, parameter="", method="", bearer_token=""):
 
 
 def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # if there is duplicated user accession number.
-    if mode == "upload":  # user_accession exits always.
+    if not mode:  # user_accession exits always.
         if acc_save:
             for Sheet in metadata:
                 table = SheetToTable[Sheet]
@@ -338,7 +336,10 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                             existing_sys_acc = [x['accession'] for x in existing[table] if (x['user_accession'] == user_accession and x['user'] == user_name)]
                             logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
                             if len(existing_sys_acc) == 1:
-                                metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
+                                if "sysaccession" in metadata[Sheet][i] and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
+                                    logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" %(metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
+                                else:
+                                    metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
                                 # replace_accession(metadata, user_accession, existing_sys_acc[0])
                             else:
                                 logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
@@ -400,7 +401,7 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                         logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
                         sys.exit(1)
 
-    elif mode == "update":
+    else:
         for Sheet in metadata:
             accessionlist = []
             for records in metadata[Sheet]:
@@ -412,8 +413,8 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                         logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (sys_accession, Sheet))
                         sys.exit(1)
                 else:
-                    logging.error("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
-                    sys.exit(1)
+                    logging.warning("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
+                    # sys.exit(1)
                 if "user_accession" in records:
                     records.pop("user_accession")
                     # user_accession = records["user_accession"]
@@ -458,7 +459,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
             fullurl = url + '/api/' + SheetToTable[Sheet]
             if Sheet not in relationship_connectto or len(relationship_connectto[Sheet]) == 0:  # if nothing to connect in the database during bulk upload
                 for entry in metadata[Sheet]:  # metadata[Sheet] is a list of dicts.
-                    if mode == "update":  # if it is update mode: system accession required!
+                    if mode:  # if it is update mode: system accession required!
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             Acsn = entry.pop("sysaccession")
                             if "user_accession" in entry and len(entry["user_accession"]) > 0:
@@ -493,7 +494,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
 
                         else:
                             logging.warning("all rows without system accession or user accession will be ignored during update!")
-                    if mode == "upload":  # if it is upload mode: skip records with system accession. skip records with user accession that match one in database.
+                    else:  # if it is upload mode: skip records with system accession. skip records with user accession that match one in database.
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             tempAcsn = entry["user_accession"]
                             AcsnDict[Sheet][tempAcsn] = entry["sysaccession"]
@@ -519,7 +520,48 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[Sheet] = {}
                 for entry in metadata[Sheet]:  # metadata[Sheet] is a list of dicts.
-                    if mode == "upload":
+                    if mode:
+                        if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
+                            tempDict = {}
+                            Acsn = entry.pop("sysaccession")
+                            if "user_accession" in entry and len(entry["user_accession"]) > 0:
+                                tempAcsn = entry.pop("user_accession")  # Don't update user_accession
+                            else:
+                                tempAcsn = Acsn
+                            # tempAcsn = entry["user_accession"]
+                            for key in relationship_connectto[Sheet]:
+                                if key in entry:
+                                    tempDict[key] = entry.pop(key)
+                            updateurl = fullurl + '/' + Acsn
+                            request(updateurl, json.dumps(entry), 'POST', bearer_token)
+                            logging.info("record %s has been updated!" % Acsn)
+                            AcsnDict[Sheet][tempAcsn] = Acsn
+                            linkDict[Sheet][Acsn] = tempDict
+                            if SheetToTable[Sheet] in submission_log:
+                                submission_log[SheetToTable[Sheet]].append(Acsn)
+                            else:
+                                submission_log[SheetToTable[Sheet]] = []
+                                submission_log[SheetToTable[Sheet]].append(Acsn)
+                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:
+                            tempAcsn = entry["user_accession"]
+                            existing = request(fullurl)
+                            # check if user_accession and user combination in the database.
+                            if not SheetToTable[Sheet] in existing:
+                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+                                sys.exit(1)
+                            userAcc_found = 0
+                            for DB_entries in existing[SheetToTable[Sheet]]:
+                                if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+                                    AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
+                                    userAcc_found = 1
+                                    logging.info("%s has been assigned with system accession %s. It won't be updated because you did not provide the system accession in the excel, but you can still link other records to it by calling %s!" % (tempAcsn, DB_entries["accession"], tempAcsn))
+                                    continue
+                            if not userAcc_found:
+                                logging.warning("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
+
+                        else:
+                            logging.warning("all rows without syster accession or user accession will be ignored during update!")
+                    else:
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             tempAcsn = entry["user_accession"]
                             AcsnDict[Sheet][tempAcsn] = entry["sysaccession"]
@@ -561,47 +603,6 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                     submission_log[SheetToTable[Sheet]] = []
                                     submission_log[SheetToTable[Sheet]].append(Acsn)
                                 logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
-                    if mode == "update":
-                        if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
-                            tempDict = {}
-                            Acsn = entry.pop("sysaccession")
-                            if "user_accession" in entry and len(entry["user_accession"]) > 0:
-                                tempAcsn = entry.pop("user_accession")  # Don't update user_accession
-                            else:
-                                tempAcsn = Acsn
-                            # tempAcsn = entry["user_accession"]
-                            for key in relationship_connectto[Sheet]:
-                                if key in entry:
-                                    tempDict[key] = entry.pop(key)
-                            updateurl = fullurl + '/' + Acsn
-                            request(updateurl, json.dumps(entry), 'POST', bearer_token)
-                            logging.info("record %s has been updated!" % Acsn)
-                            AcsnDict[Sheet][tempAcsn] = Acsn
-                            linkDict[Sheet][Acsn] = tempDict
-                            if SheetToTable[Sheet] in submission_log:
-                                submission_log[SheetToTable[Sheet]].append(Acsn)
-                            else:
-                                submission_log[SheetToTable[Sheet]] = []
-                                submission_log[SheetToTable[Sheet]].append(Acsn)
-                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:  # don't worry this block now, I have all user_accession popped in update during accession_check.
-                            tempAcsn = entry["user_accession"]
-                            existing = request(fullurl)
-                            # check if user_accession and user combination in the database.
-                            if not SheetToTable[Sheet] in existing:
-                                logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
-                                sys.exit(1)
-                            userAcc_found = 0
-                            for DB_entries in existing[SheetToTable[Sheet]]:
-                                if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                                    AcsnDict[Sheet][tempAcsn] = DB_entries["accession"]
-                                    userAcc_found = 1
-                                    logging.info("%s has been assigned with system accession %s. It won't be updated because you did not provide the system accession in the excel, but you can still link other records to it by calling %s!" % (tempAcsn, DB_entries["accession"], tempAcsn))
-                                    continue
-                            if not userAcc_found:
-                                logging.warning("%s could not be found in the database, it will be ignored during update!" % tempAcsn)
-
-                        else:
-                            logging.warning("all rows without syster accession or user accession will be ignored during update!")
 
     # ipdb.set_trace()
     print("all the record uploaded/updated, it is time to connect all the relationships!\n")
