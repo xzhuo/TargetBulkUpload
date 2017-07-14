@@ -37,14 +37,14 @@ User accession can be used as a temporary accession to link different records an
 
 The user accession can also have actural meaning to you and you want to save your user accession in our database. In this case, please make sure all your records have unique user accessions.  
 
-* Summary: 
-Don't use the ```--saveacc``` flag if:
+Summary: 
+* Don't use the ```--saveacc``` flag if:
 	* Your user accession in the excel file is temporary;
 	* You only use user accession to link records in the excel file;
 	* You may have some row without a user accession;
 	* You can make sure every row in the excel file is a new record you need to submit to your database.
 
-Always use the ```--saveacc``` flag if:
+* Always use the ```--saveacc``` flag if:
 	* You need to save user accession information in our database;
 	* all your records you have submitted, you are submitting, and you are going to submit must have unique user accessions.
 
