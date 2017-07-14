@@ -38,13 +38,13 @@ User accession can be used as a temporary accession to link different records an
 The user accession can also have actural meaning to you and you want to save your user accession in our database. In this case, please make sure all your records have unique user accessions.  
 
 * Summary: 
-Don't use the ```-u``` flag if:
+Don't use the ```--saveacc``` flag if:
 	* Your user accession in the excel file is temporary;
 	* You only use user accession to link records in the excel file;
 	* You may have some row without a user accession;
 	* You can make sure every row in the excel file is a new record you need to submit to your database.
 
-Always use the ```-u``` flag if:
+Always use the ```--saveacc``` flag if:
 	* You need to save user accession information in our database;
 	* all your records you have submitted, you are submitting, and you are going to submit must have unique user accessions.
 
@@ -53,25 +53,25 @@ Always use the ```-u``` flag if:
 	* Leave the "System Accession" column blank for the records you want to upload. If system accession is found in a row, that row will be skipped. However, the System Accession - User Accession association will still be established. 
 		* For example, if you have a mouse record in the excel with system accession "TRGTMSE0001" and user accession "USRMSE0001", the mouse record itself will not be uploaded. However, If you have a biosample extracted from the mouse, either "TRGTMSE0001" or "USRMSE0001" works if you want to link that biosample record to this mouse.
 	* "User Accession" can be used to establish relationships with other records in the same Excel file. Please fill in "User Accession" according to our accession rules (see "Instructions" tab and individual tab headers).
-	* If you don't use the ```-u``` flag, you can leave "user accession" blank if you don't need to establish any relationship to that record. You can also use "user accession" to link records. But make sure all user accessions must be unique in the excel file and all your rows are new records to the database.
-	* If you use the ```-u``` flag, you must assign a unique "user accession" to all your records. 
+	* If you don't use the ```--saveacc``` flag, you can leave "user accession" blank if you don't need to establish any relationship to that record. You can also use "user accession" to link records. But make sure all user accessions must be unique in the excel file and all your rows are new records to the database.
+	* If you use the ```--saveacc``` flag, you must assign a unique "user accession" to all your records. 
 	* All the dates in the Excel can be a date type in Excel format or a string in format "YYYY-MM-DD". Don't worry if Excel changes the date format automatically (it means Excel knows it is a date).
 	* The relationship columns are labeled with a different color on the right side in each sheet. It should be either a "User Accession" in the same Excel file or an existing "System Accession" in the database.
 2. Run it with following command in test mode:
 ```
 python3 submission.py -k <API key> -x <excel file>
 ```
-If you are using the ```-u``` flag:
+If you are using the ```--saveacc``` flag:
 ```
-python3 submission.py -k <API key> -x <excel file> -u
+python3 submission.py -k <API key> -x <excel file> --saveacc
 ```
 3. If there is no error during the test run, you can upload the same Excel file to the production database with the following command (please don't use the following command and contact us if there is any unexpected warning or error):
 ```
 python3 submission.py -k <API key> -x <excel file> --notest
 ```
-If you are using the ```-u``` flag:
+If you are using the ```--saveacc``` flag:
 ```
-python3 submission.py -k <API key> -x <excel file> -u --notest
+python3 submission.py -k <API key> -x <excel file> --saveacc --notest
 ```
 ### If you want to update existing records in the metadata database
 1. Fill in the Excel template accordingly. You must use the template in the repo. Don't rename the template; if you have to rename it, keep the version number intact in the name.
@@ -81,17 +81,17 @@ python3 submission.py -k <API key> -x <excel file> -u --notest
 	* The relationship columns are labeled with a different color on the right side in each sheet. During update, only other record's "System Accession" should be used to establish relationships.
 2. Run it with following command in test mode:
 ```
-python3 submission.py -k <API key> -x <excel file> -m update
+python3 submission.py -k <API key> -x <excel file> --update
 ```
-If you are using the ```-u``` flag:
+If you are using the ```--saveacc``` flag:
 ```
-python3 submission.py -k <API key> -x <excel file> -m update -u
+python3 submission.py -k <API key> -x <excel file> --update --saveacc
 ```
 3. If there is no error during the test run, you can update the same Excel file to the production database with the following command (please don't use the following command and contact us if there is any unexpected warning or error):
 ```
-python3 submission.py -k <API key> -x <excel file> -m update --notest
+python3 submission.py -k <API key> -x <excel file> --update --notest
 ```
-If you are using the ```-u``` flag:
+If you are using the ```--saveacc``` flag:
 ```
-python3 submission.py -k <API key> -x <excel file> -m update -u --notest
+python3 submission.py -k <API key> -x <excel file> --update -saveacc --notest
 ```
