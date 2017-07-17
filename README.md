@@ -46,11 +46,11 @@ Summary:
 
 * Always use the ```--saveacc``` flag if:
 	* You need to save user accession information in our database;
-	* all your records you have submitted, you are submitting, and you are going to submit must have unique user accessions.
+	* all your records you have submitted, you are submitting, and you are going to submit must have unique user accessions. (all your records in different batches must have unique user accessions!)
 
 ### If you want to upload new data to the metadata database
 1. Fill in the Excel template accordingly. You must use the template in the repo. Don't rename the template; if you have to rename it, keep the version number intact in the name.
-	* Leave the "System Accession" column blank for the records you want to upload. If system accession is found in a row, that row will be skipped. However, the System Accession - User Accession association will still be established. 
+	* Leave the "System Accession" column blank for the records you want to upload. If system accession is found in a row, that row will not be uploaded. However, the System Accession - User Accession association will still be established. 
 		* For example, if you have a mouse record in the excel with system accession "TRGTMSE0001" and user accession "USRMSE0001", the mouse record itself will not be uploaded. However, If you have a biosample extracted from the mouse, either "TRGTMSE0001" or "USRMSE0001" works if you want to link that biosample record to this mouse.
 	* "User Accession" can be used to establish relationships with other records in the same Excel file. Please fill in "User Accession" according to our accession rules (see "Instructions" tab and individual tab headers).
 	* If you don't use the ```--saveacc``` flag, you can leave "user accession" blank if you don't need to establish any relationship to that record. You can also use "user accession" to link records. But make sure all user accessions must be unique in the excel file and all your rows are new records to the database.
