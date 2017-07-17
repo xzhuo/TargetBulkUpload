@@ -83,15 +83,9 @@ python3 submission.py -k <API key> -x <excel file> --saveacc --notest
 ```
 python3 submission.py -k <API key> -x <excel file> --update
 ```
-If you are using the ```--saveacc``` flag:
-```
-python3 submission.py -k <API key> -x <excel file> --update --saveacc
-```
+
 3. If there is no error during the test run, you can update the same Excel file to the production database with the following command (please don't use the following command and contact us if there is any unexpected warning or error):
 ```
 python3 submission.py -k <API key> -x <excel file> --update --notest
 ```
-If you are using the ```--saveacc``` flag:
-```
-python3 submission.py -k <API key> -x <excel file> --update -saveacc --notest
-```
+
