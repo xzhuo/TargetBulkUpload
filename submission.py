@@ -645,7 +645,6 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                     else:
                         logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
     submission_details = {"details": json.dumps(submission_log)}
-    ipdb.set_trace()
     submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
     if submitted_logs == 201:
         logging.info("Submission has been successfully saved!")
