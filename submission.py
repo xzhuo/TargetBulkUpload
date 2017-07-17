@@ -259,6 +259,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                     elif d["user_accession"] == 'NA':
                         randomid = uuid.uuid1()
                         d["user_accession"] = accession_rule + str(randomid)
+                        dict_list.append(d)
                     else:
                         logging.error("There has to be a valid user accession in %s" % Sheet)
                         sys.exit(1)
