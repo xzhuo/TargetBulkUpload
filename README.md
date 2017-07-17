@@ -35,7 +35,7 @@ Or You can click the "clone or download" button.
 Before fill in the excel template, you must decide how do you want to use the "user accession" column.  
 User accession can be used as a temporary accession to link different records and establish relationships. In this case, the user accessions you entered in the excel will be removed once your records get their system accessions.  
 
-The user accession can also have actural meaning to you and you want to save your user accession in our database. In this case, please make sure all your records have unique user accessions.  
+The user accession can also have actural meaning to you and you want to save your user accession in our database. In this case, records submitted by a same user must have unique user accession. please make sure all your records have unique user accessions.  
 
 Summary: 
 * Don't use the ```--saveacc``` flag if:
@@ -50,7 +50,7 @@ Summary:
 
 ### If you want to upload new data to the metadata database
 1. Fill in the Excel template accordingly. You must use the template in the repo. Don't rename the template; if you have to rename it, keep the version number intact in the name.
-	* Leave the "System Accession" column blank for the records you want to upload. If system accession is found in a row, that row will not be uploaded. However, the System Accession - User Accession association will still be established. 
+	* Leave the "System Accession" column blank for the records you want to upload. If a system accession is found in a row, the data in the row will not be uploaded. However, both the "system accession" and the "user accession" in that row now point to the same record in the metadata database, and either one can be used to establish linkage.
 		* For example, if you have a mouse record in the excel with system accession "TRGTMSE0001" and user accession "USRMSE0001", the mouse record itself will not be uploaded. However, If you have a biosample extracted from the mouse, either "TRGTMSE0001" or "USRMSE0001" works if you want to link that biosample record to this mouse.
 	* "User Accession" can be used to establish relationships with other records in the same Excel file. Please fill in "User Accession" according to our accession rules (see "Instructions" tab and individual tab headers).
 	* If you don't use the ```--saveacc``` flag, you can leave "user accession" blank if you don't need to establish any relationship to that record. You can also use "user accession" to link records. But make sure all user accessions must be unique in the excel file and all your rows are new records to the database.
