@@ -63,7 +63,6 @@ def get_args():
         '-u',
         action="store_true",
         dest="mode",
-        default='upload',
         help="Run mode. Without the flag (default), only records without systerm accession and without \
         matching user accession with be posted to the database. All the records with system accession in the \
         excel with be ignored. For records without system accession but have user accessions, the user accession \
