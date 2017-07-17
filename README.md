@@ -79,7 +79,7 @@ python3 submission.py -k <API key> -x <excel file> --saveacc --notest
 	* All the dates in the Excel can be a date type in Excel format or a string in format "YYYY-MM-DD". Don't worry if Excel changes the date format automatically (it means Excel knows it is a date).
 	* "user accession" column will be ignored duing update.
 	* The relationship columns are labeled with a different color on the right side in each sheet. During update, only other record's "System Accession" should be used to establish relationships.
-2. Run it with following command in test mode:
+2. Run it with following command in test mode (```--saveacc``` flag does not affect update):
 ```
 python3 submission.py -k <API key> -x <excel file> --update
 ```
