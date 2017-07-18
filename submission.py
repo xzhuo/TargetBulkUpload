@@ -29,8 +29,7 @@ def get_args():
         dest="tem",
         choices=['V1', 'V2', 'json'],
         default='V2',
-        help='The different version of templates. CSV is not supported yet. V1 is the original template with all the data in a single sheet.\
-         V2 seperated different tables to different sheets in excel (recommended). json is purely for testing.\n',
+        help='The different version of templates. Only V2 is supported now.',
     )
     parser.add_argument(
         '--excel',
@@ -46,7 +45,7 @@ def get_args():
         action="store_true",
         dest="notest",
         help='test flag. default option is true, which will submit all the metadata to the test database. \
-        The metadata only goes to product database if this option is false. Our recommended practice is use \
+        The metadata only goes to the production database if this option is false. Our recommended practice is use \
         TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
         metadata successfully submitted to test database.\n',
     )
