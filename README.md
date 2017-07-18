@@ -88,4 +88,5 @@ python3 submission.py -k <API key> -x <excel file> --update
 ```
 python3 submission.py -k <API key> -x <excel file> --update --notest
 ```
-
+## A summary flow chart
+![Flow chart](https://github.com/xzhuo/TargetBulkUpload/blob/master/bulkupload_flow.20170714.png "submit summary flow chart")
