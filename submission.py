@@ -251,7 +251,8 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                         dict_list.append(d)
                     else:
                         logging.error("There has to be a valid user accession in %s" % Sheet)
-                        sys.exit(1)
+                        # dict_list.append(d)  # temporary to import ENCODE data
+                        sys.exit(1)  # temporary to import ENCODE data
                 else:
                     if d["user_accession"].startswith(accession_rule):
                         dict_list.append(d)
@@ -441,7 +442,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
     saved_submission_url = url_submit + "/api/submission"
-    orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File"]
+    orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File", "Experiment"]
     for Sheet in orderList:
         print("\nworking on: ")
         print(Sheet)
