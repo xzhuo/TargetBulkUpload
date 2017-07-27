@@ -241,18 +241,21 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                         else:
                             d[column_name] = value
             if mode:
-                if d["sysaccession"].startswith("TRGT"):
+                if acc_save:
                     dict_list.append(d)
                 else:
-                    logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
+                    if d["sysaccession"].startswith("TRGT"):
+                        dict_list.append(d)
+                    else:
+                        logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
             else:
                 if acc_save:
                     if d["user_accession"].startswith(accession_rule):
                         dict_list.append(d)
                     else:
                         logging.error("There has to be a valid user accession in %s" % Sheet)
-                        # dict_list.append(d)  # temporary to import ENCODE data
-                        sys.exit(1)  # temporary to import ENCODE data
+                        dict_list.append(d)  # temporary to import ENCODE data
+                        # sys.exit(1)  # temporary to import ENCODE data
                 else:
                     if d["user_accession"].startswith(accession_rule):
                         dict_list.append(d)
@@ -333,11 +336,11 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                         if user_accession not in existing_user_accession:
                             accessionlist.append(user_accession)
                         else:
-                            existing_sys_acc = [x['accession'] for x in existing[table] if (x['user_accession'] == user_accession and x['user'] == user_name)]
+                            existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
                             logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
                             if len(existing_sys_acc) == 1:
                                 if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
-                                    logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" %(metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
+                                    logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
                                     sys.exit(1)
                                 else:
                                     metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
@@ -621,7 +624,8 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                     linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
                     if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
                         linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
-                    elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):
+                    else:  # temporary for ENCODE data
+                    # elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):  # temporary for ENCODE data
                         # ipdb.set_trace()
                         if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
                             logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
@@ -629,9 +633,9 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             sys.exit(1)
                         else:
                             linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
-                    else:
-                        logging.warning("%s is not a valid accession. %s %s relationship %s is not established." %
-                                        (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
+                    # else:  # temporary for ENCODE data 3 lines.
+                    #     logging.warning("%s is not a valid accession. %s %s relationship %s is not established." %
+                    #                     (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
 
                     if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
                         # linkBody = {SheetToTable[linkTo]['Acsn']: linkDict[Sheet][Acsn][connection_name], "connectionName": "assay_input"}
