@@ -100,6 +100,11 @@ def main():
         sys.exit("please provide a user API key!")  # make token argument mandatory.
     schema_json = urlfields('schema', testurl_meta)
     relationship_json = urlfields('relationships', testurl_meta)
+    for x in relationship_json["Assay"]["connections"]:
+        if x['display_name'] == "Biosample":
+            x['name'] = 'assay_input_biosample'
+        if x['display_name'] == "Library":
+            x['name'] = 'assay_input_library'
     if versionNo["version"] not in args.excel:
         logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
         sys.exit(1)
@@ -406,27 +411,61 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                         sys.exit(1)
 
     else:
-        for Sheet in metadata:
-            accessionlist = []
-            for records in metadata[Sheet]:
-                if "sysaccession" in records:
-                    sys_accession = records["sysaccession"]
-                    if sys_accession not in accessionlist:
-                        accessionlist.append(sys_accession)
-                    else:
-                        logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (sys_accession, Sheet))
+        if acc_save:
+            for Sheet in metadata:
+                table = SheetToTable[Sheet]
+                fullurl = url + '/api/' + table
+                existing = request(fullurl)
+                # check if user_accession and user combination in the database.
+                # if not SheetToTable[Sheet] in existing:
+                #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+                #     sys.exit(1)
+                # redundant_user_accession = 0
+                # for DB_entries in existing[SheetToTable[Sheet]]:
+                #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+                #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\n" % (tempAcsn, DB_entries["user"], tempAcsn))
+                #         redundant_user_accession = 1
+                #         continue
+                # if redundant_user_accession == 0:
+                existing_user_accession = [x['user_accession'] for x in existing[table] if x["user"] == user_name]
+                accessionlist = []
+                # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
+                # delete_i = []  # Hold all index to be deleted.
+                for i, records in enumerate(metadata[Sheet]):
+                    user_accession = records["user_accession"]
+                    if user_accession == 'NA':
+                        logging.error("please provide user accession for all rows in %s" % Sheet)
                         sys.exit(1)
-                else:
-                    logging.warning("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
-                    # sys.exit(1)
-                if "user_accession" in records:
-                    records.pop("user_accession")
-                    # user_accession = records["user_accession"]
-                    # if user_accession not in accessionlist:
-                    #     accessionlist.append(sys_accession)
+                    elif user_accession not in accessionlist:
+                        if user_accession not in existing_user_accession:
+                            accessionlist.append(user_accession)
+                        else:
+                            existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
+                            logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
+                            if len(existing_sys_acc) == 1:
+                                if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
+                                    logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
+                                    sys.exit(1)
+                                else:
+                                    metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
+                                # replace_accession(metadata, user_accession, existing_sys_acc[0])
+                            else:
+                                logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
+                                sys.exit(1)
+        else:
+            for Sheet in metadata:
+                accessionlist = []
+                for records in metadata[Sheet]:
+                    if "sysaccession" in records:
+                        sys_accession = records["sysaccession"]
+                        if sys_accession not in accessionlist:
+                            accessionlist.append(sys_accession)
+                        else:
+                            logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (sys_accession, Sheet))
+                            sys.exit(1)
                     # else:
-                    #     logging.error("duplicated user accession %s in %s! You don't need to enter user accession during update." % (sys_accession, Sheet))
-                    #     sys.exit(1)
+                    #     logging.warning("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
+                        # sys.exit(1)
 
 
 def replace_accession(metadata, user_accession, new_accession=""):
@@ -467,7 +506,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             Acsn = entry.pop("sysaccession")
                             if "user_accession" in entry and len(entry["user_accession"]) > 0:
-                                tempAcsn = entry.pop("user_accession")  # Don't update user_accession
+                                tempAcsn = entry["user_accession"]
                             else:
                                 tempAcsn = Acsn
                             updateurl = fullurl + '/' + Acsn
@@ -529,7 +568,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             tempDict = {}
                             Acsn = entry.pop("sysaccession")
                             if "user_accession" in entry and len(entry["user_accession"]) > 0:
-                                tempAcsn = entry.pop("user_accession")  # Don't update user_accession
+                                tempAcsn = entry["user_accession"]
                             else:
                                 tempAcsn = Acsn
                             # tempAcsn = entry["user_accession"]
