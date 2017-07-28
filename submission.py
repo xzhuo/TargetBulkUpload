@@ -100,6 +100,11 @@ def main():
         sys.exit("please provide a user API key!")  # make token argument mandatory.
     schema_json = urlfields('schema', testurl_meta)
     relationship_json = urlfields('relationships', testurl_meta)
+    for x in relationship_json["Assay"]["connections"]:
+        if x['display_name'] == "Biosample":
+            x['name'] = 'assay_input_biosample'
+        if x['display_name'] == "Library":
+            x['name'] = 'assay_input_library'
     if versionNo["version"] not in args.excel:
         logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
         sys.exit(1)
