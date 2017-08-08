@@ -1,2 +1,5 @@
 
 ~$TaRGET metadata template v2.0.xlsx
+/dist
+*egg-info*
+/build
