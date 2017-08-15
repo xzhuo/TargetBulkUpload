@@ -402,7 +402,9 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                     user_accession = records["user_accession"]
                     if user_accession not in accessionlist:
                         accessionlist.append(user_accession)
-                        replace_accession(metadata, user_accession)
+                        new_accession = replace_accession(metadata, user_accession)
+                        logging.info("user accession %s has been replaced by %s!" % (user_accession, new_accession))
+
                     else:
                         logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
                         sys.exit(1)
@@ -440,6 +442,7 @@ def replace_accession(metadata, user_accession, new_accession=""):
             for key in row:
                 if row[key] == user_accession:
                     metadata[Sheet][i][key] = new_accession
+    return new_accession
 
 
 def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
