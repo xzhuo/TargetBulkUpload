@@ -165,21 +165,9 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest:
-        print("This is serious: you are going to upload you data to the real database!")
-        prompt = input('Are you sure your excel file is correct and you want to proceed? (Yes or No)    ')
-        if prompt == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-            accession_check(submission, url_meta, args.mode, args.useracc, user_name)
-            upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
-        else:
-            prompt_test = input('Hmm, How about test run your excel file using our test database? (Yes or No)?    ')
-            if prompt_test == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-                accession_check(submission, url_meta, args.mode, args.useracc, user_name)
-                upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
-                print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
-                    now you can upload the same file to real database with the '--notest' flag.")
-            else:
-                sys.exit("quit")
-
+        accession_check(submission, url_meta, args.mode, args.useracc, user_name)
+        upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
+        print("If you did not find errors above, all the records were successfully uploaded to TaRGET metadata database!")
     else:
         accession_check(submission, testurl_meta, SheetToTable, args.mode, args.useracc, user_name)
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
