@@ -9,7 +9,6 @@ import logging
 import datetime
 import uuid  # used to generate unique user accesion if it is not provided.
 from socket import timeout
-import ipdb  # for debug
 
 url_meta = 'http://meta.target.wustl.edu'
 url_submit = 'http://submit.target.wustl.edu'
