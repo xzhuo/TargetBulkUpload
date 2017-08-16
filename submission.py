@@ -9,7 +9,6 @@ import logging
 import datetime
 import uuid  # used to generate unique user accesion if it is not provided.
 from socket import timeout
-import ipdb  # for debug
 
 url_meta = 'http://meta.target.wustl.edu'
 url_submit = 'http://submit.target.wustl.edu'
@@ -166,21 +165,9 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest:
-        print("This is serious: you are going to upload you data to the real database!")
-        prompt = input('Are you sure your excel file is correct and you want to proceed? (Yes or No)    ')
-        if prompt == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-            accession_check(submission, url_meta, args.mode, args.useracc, user_name)
-            upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
-        else:
-            prompt_test = input('Hmm, How about test run your excel file using our test database? (Yes or No)?    ')
-            if prompt_test == 'Yes' or prompt == 'yes' or prompt == 'Y' or prompt == 'y':
-                accession_check(submission, url_meta, args.mode, args.useracc, user_name)
-                upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
-                print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
-                    now you can upload the same file to real database with the '--notest' flag.")
-            else:
-                sys.exit("quit")
-
+        accession_check(submission, url_meta, args.mode, args.useracc, user_name)
+        upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
+        print("If you did not find errors above, all the records were successfully uploaded to TaRGET metadata database!")
     else:
         accession_check(submission, testurl_meta, SheetToTable, args.mode, args.useracc, user_name)
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
@@ -304,10 +291,10 @@ def request(url, parameter="", method="", bearer_token=""):
         ResponseDict = json.loads(response.read().decode('ascii'))
         if "accession" in ResponseDict:
             return ResponseDict["accession"]
-        elif len(ResponseDict) == 1:  # should have only one item.
-            return ResponseDict
+        # elif len(ResponseDict) == 1:  # should have only one item.
+        #     return ResponseDict
         else:
-            return ResponseDict["statusCode"]
+            return ResponseDict
 
 
 def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # if there is duplicated user accession number.
@@ -405,7 +392,9 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                     user_accession = records["user_accession"]
                     if user_accession not in accessionlist:
                         accessionlist.append(user_accession)
-                        replace_accession(metadata, user_accession)
+                        new_accession = replace_accession(metadata, user_accession)
+                        logging.info("user accession %s has been replaced by %s!" % (user_accession, new_accession))
+
                     else:
                         logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
                         sys.exit(1)
@@ -477,6 +466,7 @@ def replace_accession(metadata, user_accession, new_accession=""):
             for key in row:
                 if row[key] == user_accession:
                     metadata[Sheet][i][key] = new_accession
+    return new_accession
 
 
 def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
@@ -682,7 +672,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                     else:
                         linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": connection_name}
                     responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
-                    if responsestatus == 200:
+                    if responsestatus["statusCode"] == 200:
                         logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
                     elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
                         logging.error("%s relationships is not linked, seems like an error!" % (Acsn))
@@ -692,8 +682,8 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     if bool(submission_log):  # Only save not empty submissions.
         submission_details = {"details": json.dumps(submission_log)}
         submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
-        if submitted_logs == 201:
-            logging.info("Submission has been successfully saved!")
+        if submitted_logs["statusCode"] == 201:
+            logging.info("Submission has been successfully saved as %s!" % submitted_logs["submission_id"])
         else:
             logging.error("Fail to save submission!")
 
