@@ -234,7 +234,10 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                             d[column_name] = value
             if mode:
                 if acc_save:
-                    dict_list.append(d)
+                    if d["user_accession"] != 'NA' or ("sysaccession" in d and d["sysaccession"].startswith("TRGT")):
+                        dict_list.append(d)
+                    else:
+                        logging.warning("All records in %s without a valid system accession or user accession will be skipped during update with saveacc flag!" % Sheet)
                 else:
                     if d["sysaccession"].startswith("TRGT"):
                         dict_list.append(d)
@@ -242,22 +245,21 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                         logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
             else:
                 if acc_save:
-                    if d["user_accession"].startswith(accession_rule):
+                    if d["user_accession"] != 'NA':
                         dict_list.append(d)
                     else:
-                        logging.error("There has to be a valid user accession in %s" % Sheet)
-                        dict_list.append(d)  # temporary to import ENCODE data
-                        # sys.exit(1)  # temporary to import ENCODE data
+                        logging.error("User accession in %s cannot be empty with saveacc flag!" % Sheet)
+                        # dict_list.append(d)  # temporary to import ENCODE data
+                        sys.exit(1)  # temporary to import ENCODE data
                 else:
-                    if d["user_accession"].startswith(accession_rule):
-                        dict_list.append(d)
-                    elif d["user_accession"] == 'NA':
+                    if d["user_accession"] == 'NA':
                         randomid = uuid.uuid1()
                         d["user_accession"] = accession_rule + str(randomid)
                         dict_list.append(d)
                     else:
-                        logging.error("There has to be a valid user accession in %s" % Sheet)
-                        sys.exit(1)
+                        dict_list.append(d)
+                        # logging.error("There has to be a valid user accession in %s" % Sheet)
+                        # sys.exit(1)
 
         all_sheets[Sheet] = dict_list
 
@@ -416,21 +418,38 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                 #         redundant_user_accession = 1
                 #         continue
                 # if redundant_user_accession == 0:
-                existing_user_accession = [x['user_accession'] for x in existing[table] if x["user"] == user_name]
+                existing_user_accession = [x['user_accession'] for x in existing[table] if "user_accession" in x and x["user"] == user_name]
+                existing_sys_accession = [x['sysaccession'] for x in existing[table] if "sysaccession" in x and x["user"] == user_name]
                 accessionlist = []
+                sysaccession_list = []
                 # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
                 # delete_i = []  # Hold all index to be deleted.
                 for i, records in enumerate(metadata[Sheet]):
-                    user_accession = records["user_accession"]
+                    user_accession = 'NA'
+                    sysaccession = 'NA'
+                    if "user_accession" in records:
+                        user_accession = records["user_accession"]
+                    if "sysaccession" in records:
+                        sysaccession = records["sysaccession"]
                     if user_accession == 'NA':
-                        logging.error("please provide user accession for all rows in %s" % Sheet)
-                        sys.exit(1)
+                        if sysaccession not in sysaccession_list:
+                            if sysaccession not in existing_sys_accession:
+                                logging.error("system accession %s in %s does not exist in our database, unable to update it!" % (sysaccession, Sheet))
+                                sys.exit(1)
+                            else:
+                                sysaccession_list.append(sysaccession)
+                                records.pop("user_accession")
+                        else:
+                            logging.error("redundant system accession %s in %s!" % (sysaccession, Sheet))
+                            sys.exit(1)
                     elif user_accession not in accessionlist:
                         if user_accession not in existing_user_accession:
-                            accessionlist.append(user_accession)
+                            logging.error("user accession %s in %s does not exist in our database, unable to update it!" % (user_accession, Sheet))
+                            sys.exit(1)
                         else:
+                            accessionlist.append(user_accession)
                             existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
-                            logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
+                            logging.info("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
                             if len(existing_sys_acc) == 1:
                                 if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
                                     logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
@@ -441,19 +460,22 @@ def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # 
                             else:
                                 logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
                                 sys.exit(1)
+                    else:
+                        logging.error("redundant user accession %s in %s!" % (user_accession, Sheet))
+                        sys.exit(1)
         else:
             for Sheet in metadata:
-                accessionlist = []
+                sysaccession_list = []
                 for records in metadata[Sheet]:
                     if "sysaccession" in records:
                         sys_accession = records["sysaccession"]
-                        if sys_accession not in accessionlist:
-                            accessionlist.append(sys_accession)
+                        if sys_accession not in sysaccession_list:
+                            sysaccession_list.append(sys_accession)
                         else:
                             logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (sys_accession, Sheet))
                             sys.exit(1)
-                    # else:
-                    #     logging.warning("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
+                    else:
+                        logging.warning("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
                         # sys.exit(1)
 
 
@@ -653,7 +675,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                     linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
                     if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
                         linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
-                    else:  # temporary for ENCODE data
+                    else:  # no longer need user accession start with USR
                     # elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):  # temporary for ENCODE data
                         # ipdb.set_trace()
                         if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
