@@ -1,6 +1,15 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+
+## [0.3.1] - 2-17-08-16
+### changes committed
+* Now it supportes update records using user accession and link records using user accession (with --saveacc flag)
+* User accession now does not require a string start with "USR" anymore.
+
+### TODO
+* Update readme, flowchat and tutorial with new function.
+
 ## [0.3.0] - 2017-07-14
 ### changes committed
 * Rename ```-u``` flag to ```--saveacc``` and ```-s```.
