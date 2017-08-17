@@ -165,7 +165,7 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest:
-        accession_check(submission, url_meta, args.mode, args.useracc, user_name)
+        accession_check(submission, url_meta, SheetToTable, args.mode, args.useracc, user_name)
         upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to TaRGET metadata database!")
     else:
