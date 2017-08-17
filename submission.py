@@ -668,8 +668,8 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                 for connection_name in linkDict[Sheet][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
                     # regex connection_name here. if true, use it directly, otherwise use relationship_connectto[Sheet][connection_name]:  I don't understand the comment now.
                     # linkTo = AcsnDict[Sheet][relationship_connectto[Sheet][connection_name]]
-                    # if linkDict[Sheet][Acsn][connection_name] == 'NA':
-                    #     continue
+                    if linkDict[Sheet][Acsn][connection_name] == 'NA':
+                        continue
                     linkTo = relationship_connectto[Sheet][connection_name]
                     LinkTo = linkTo[:1].upper() + linkTo[1:]
                     linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
