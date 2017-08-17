@@ -10,8 +10,8 @@ import datetime
 import uuid  # used to generate unique user accesion if it is not provided.
 from socket import timeout
 
-url_meta = 'http://meta.target.wustl.edu'
-url_submit = 'http://submit.target.wustl.edu'
+url_meta = 'http://target.wustl.edu:7006'
+url_submit = 'http://target.wustl.edu:7002'
 testurl_meta = 'http://target.wustl.edu:8006'
 testurl_submit = 'http://target.wustl.edu:8002'
 
@@ -286,7 +286,7 @@ def request(url, parameter="", method="", bearer_token=""):
         logging.error(ResponseDict["message"])
         sys.exit(1)
     except timeout:
-        logging.error("Fail to update or link the following record to databse link %s. Please make sure the system accession used here is correct.\n%s" % (url, parameter))
+        logging.error("Fail to create or update the following record to databse link %s. Please make sure the url used here is correct.\n%s" % (url, parameter))
         sys.exit(1)
 
     else:
