@@ -290,7 +290,7 @@ def request(url, parameter="", method="", bearer_token=""):
         sys.exit(1)
 
     else:
-        ResponseDict = json.loads(response.read().decode('ascii'))
+        ResponseDict = json.loads(response.read().decode())
         if "accession" in ResponseDict:
             return ResponseDict["accession"]
         # elif len(ResponseDict) == 1:  # should have only one item.
