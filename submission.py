@@ -10,8 +10,8 @@ import datetime
 import uuid  # used to generate unique user accesion if it is not provided.
 from socket import timeout
 
-url_meta = 'http://meta.target.wustl.edu'
-url_submit = 'http://submit.target.wustl.edu'
+url_meta = 'http://target.wustl.edu:7006'
+url_submit = 'http://target.wustl.edu:7002'
 testurl_meta = 'http://target.wustl.edu:8006'
 testurl_submit = 'http://target.wustl.edu:8002'
 
@@ -165,7 +165,7 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest:
-        accession_check(submission, url_meta, args.mode, args.useracc, user_name)
+        accession_check(submission, url_meta, SheetToTable, args.mode, args.useracc, user_name)
         upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to TaRGET metadata database!")
     else:
@@ -173,7 +173,8 @@ def main():
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
         upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
-            now you can upload the same file to real database with the '--notest' flag.")
+            now you can upload the same file to real database with the '--notest' flag if you are using command line, \
+            if you are using our website uploading excel then click the submit button.")
 
 
 def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save):
@@ -195,10 +196,10 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                 data_type = "unknown"
                 if Column_name == "System Accession":
                     column_name = "sysaccession"
-                    data_type = "string"
+                    data_type = "text"
                 if Column_name == "User Accession":
                     Column_name = "User accession"
-                    data_type = "string"
+                    data_type = "text"
                 for fielddict in schema_json[Sheet]:
                     if fielddict["text"] == Column_name:
                         column_name = fielddict["name"]
@@ -208,11 +209,11 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                 # column_name = Column_name[:1].lower() + Column_name[1:]  # first character lowercase
                 if column_name == "NA" and Sheet in ColumnnameToRelationship and Column_name in ColumnnameToRelationship[Sheet]:
                     column_name = ColumnnameToRelationship[Sheet][Column_name]
-                    data_type = "string"
+                    data_type = "text"
 
                 if column_name == "zip_code" or column_name == "batchId":
-                    data_type = "string"
-                # data_type = "string"  # wait until the correct type set!! Temporary line here
+                    data_type = "text"
+                # data_type = "text"  # wait until the correct type set!! Temporary line here
                 if column_name == "NA":
                     logging.warning("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
                 else:
@@ -224,8 +225,9 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                     if column_name == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or column_name == "sysaccession":
+                    # if value != '' or column_name == "sysaccession" or mode:  # Sys accession always true. in upload mode, only non empty value TRUE. in update mode, everything TRUE.
                         ctype = sheet.cell(row_index, col_index).ctype
-                        if data_type == "string":
+                        if data_type == "text":
                             d[column_name] = str(value).rstrip()  # use string for now. May use number later.
                         elif data_type == "date" and ctype == 3:
                             # ipdb.set_trace()
@@ -286,11 +288,11 @@ def request(url, parameter="", method="", bearer_token=""):
         logging.error(ResponseDict["message"])
         sys.exit(1)
     except timeout:
-        logging.error("Fail to update or link the following record to databse link %s. Please make sure the system accession used here is correct.\n%s" % (url, parameter))
+        logging.error("Fail to create or update the following record to databse link %s. Please make sure the url used here is correct.\n%s" % (url, parameter))
         sys.exit(1)
 
     else:
-        ResponseDict = json.loads(response.read().decode('ascii'))
+        ResponseDict = json.loads(response.read().decode())
         if "accession" in ResponseDict:
             return ResponseDict["accession"]
         # elif len(ResponseDict) == 1:  # should have only one item.
@@ -668,8 +670,8 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                 for connection_name in linkDict[Sheet][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
                     # regex connection_name here. if true, use it directly, otherwise use relationship_connectto[Sheet][connection_name]:  I don't understand the comment now.
                     # linkTo = AcsnDict[Sheet][relationship_connectto[Sheet][connection_name]]
-                    # if linkDict[Sheet][Acsn][connection_name] == 'NA':
-                    #     continue
+                    if linkDict[Sheet][Acsn][connection_name] == 'NA':
+                        continue
                     linkTo = relationship_connectto[Sheet][connection_name]
                     LinkTo = linkTo[:1].upper() + linkTo[1:]
                     linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
