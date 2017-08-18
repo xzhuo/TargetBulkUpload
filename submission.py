@@ -173,7 +173,8 @@ def main():
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
         upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
-            now you can upload the same file to real database with the '--notest' flag.")
+            now you can upload the same file to real database with the '--notest' flag if you are using command line, \
+            if you are using our website uploading excel then click the submit button.")
 
 
 def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save):
@@ -195,10 +196,10 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                 data_type = "unknown"
                 if Column_name == "System Accession":
                     column_name = "sysaccession"
-                    data_type = "string"
+                    data_type = "text"
                 if Column_name == "User Accession":
                     Column_name = "User accession"
-                    data_type = "string"
+                    data_type = "text"
                 for fielddict in schema_json[Sheet]:
                     if fielddict["text"] == Column_name:
                         column_name = fielddict["name"]
@@ -208,11 +209,11 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                 # column_name = Column_name[:1].lower() + Column_name[1:]  # first character lowercase
                 if column_name == "NA" and Sheet in ColumnnameToRelationship and Column_name in ColumnnameToRelationship[Sheet]:
                     column_name = ColumnnameToRelationship[Sheet][Column_name]
-                    data_type = "string"
+                    data_type = "text"
 
                 if column_name == "zip_code" or column_name == "batchId":
-                    data_type = "string"
-                # data_type = "string"  # wait until the correct type set!! Temporary line here
+                    data_type = "text"
+                # data_type = "text"  # wait until the correct type set!! Temporary line here
                 if column_name == "NA":
                     logging.warning("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
                 else:
@@ -224,8 +225,9 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                     if column_name == "strand_specificity":
                         value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or column_name == "sysaccession":
+                    # if value != '' or column_name == "sysaccession" or mode:  # Sys accession always true. in upload mode, only non empty value TRUE. in update mode, everything TRUE.
                         ctype = sheet.cell(row_index, col_index).ctype
-                        if data_type == "string":
+                        if data_type == "text":
                             d[column_name] = str(value).rstrip()  # use string for now. May use number later.
                         elif data_type == "date" and ctype == 3:
                             # ipdb.set_trace()
