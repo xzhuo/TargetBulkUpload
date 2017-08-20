@@ -21,15 +21,7 @@ versionNo = {"version": "2.0"}
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--template',
-        '-t',
-        action="store",
-        dest="tem",
-        choices=['V1', 'V2', 'json'],
-        default='V2',
-        help='The different version of templates. Only V2 is supported now.',
-    )
+
     parser.add_argument(
         '--excel',
         '-x',
@@ -69,20 +61,7 @@ def get_args():
         system accession (only update filled columns). it will complain with an error if no matching system \
         accession is found in the database.\n"
     )
-    parser.add_argument(
-        '--saveacc',
-        '-s',
-        action="store_true",
-        dest="useracc",
-        help="During upload whether or not save user accession in the excel sheet. This flag has no effect in update mode.\
-        Don't use this flag if:\
-        your user accession in the excel file is temporary; You only use user accession to link records in the excel file;\n\
-        You may have some row without a user accession; You can make sure every row in the excel file is a new\
-        record you need to upload to the database. \
-        Use the '--saveacc' flag if:\
-        You need to save user accession information in our database; You are keeping a record of all your data;\
-        all your records submitted to our database, in the excel file and future submission have unique user accession.\n"
-    )
+
     return parser.parse_args()
 
 
@@ -127,49 +106,16 @@ def main():
             ColumnnameToAllfields[Table] = {**{x['text']: x['name'] for x in schema_json[Table] if 'text' in x}, **ColumnnameToRelationship[Table]}  # require python3.5 or later.
         else:
             ColumnnameToAllfields[Table] = {x['text']: x['name'] for x in schema_json[Table] if 'text' in x}
-    if args.tem == "V1":
-        logging.error("excel template Version 1 is no longer supported, please download and fill in metadata using the latest template.")
-        sys.exit(1)
-        # submission = excel2JSON(args.excel, schema_json, ColumnnameToRelationship)
-    elif args.tem == "V2":
-        submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode, args.useracc)
-    elif args.tem == "json":
-        with open(args.excel) as data_file:
-            submission_in = json.load(data_file)
-            submission = dict()
-            for table in submission_in:
-                submission[table] = list()
-                for acc in submission_in[table]:  # acc for accession
-                    if acc != "NA":
-                        if "User Accession" in submission_in[table][acc]:
-                            submission_in[table][acc]["User accession"] = submission_in[table][acc].pop("User Accession")
-                        # submission[table][acc] = {ColumnnameToAllfields[table][key]: value for (key, value) in submission[table][acc].items()}
-                        submission[table].append({ColumnnameToAllfields[table][key]: value for (key, value) in submission_in[table][acc].items()})
 
-                    # for subkey in submission[key][acc]:
-                    #     if subkey == "User Accession":
-                    #         subkey = "User accession"
-                    #     if subkey in schemafieldname[key]:
-                    #         submission[key][acc][schemafieldname[key][subkey]] = submission[key][acc].pop(subkey)
-                    #         # replace subkey: value to schemafieldname[key][subkey]: value
-                    #     elif subkey in ColumnnameToRelationship[key]:
-                    #         # replace subkey: value to ColumnnameToRelationship[key][subkey]: value
-                    #         submission[key][acc][ColumnnameToRelationship[key][subkey]] = submission[key][acc].pop(subkey)
-                    #     # elif subkey == "User Accession" or subkey == "User accession":
-                    #     #     submission[key][acc]["user_accession"] = submission[key][acc].pop(subkey)
-                    #     else:
-                    #         ipdb.set_trace()
-                    #         print("not found subkey?")
-                    #         print(key)
-                    #         print(subkey)
+    submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode)
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
-    if args.notest:
-        accession_check(submission, url_meta, SheetToTable, args.mode, args.useracc, user_name)
+    if args.notest or args.mode:
+        accession_check(submission, url_meta, SheetToTable, args.mode, user_name)
         upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
-        print("If you did not find errors above, all the records were successfully uploaded to TaRGET metadata database!")
+        print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
-        accession_check(submission, testurl_meta, SheetToTable, args.mode, args.useracc, user_name)
+        accession_check(submission, testurl_meta, SheetToTable, args.mode, user_name)
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
         upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
@@ -177,7 +123,7 @@ def main():
             if you are using our website uploading excel then click the submit button.")
 
 
-def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save):
+def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
     wb = xlrd.open_workbook(file)
     sheet_names = wb.sheet_names()
     all_sheets = OrderedDict()
@@ -235,33 +181,17 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, acc_save
                         else:
                             d[column_name] = value
             if mode:
-                if acc_save:
-                    if d["user_accession"] != 'NA' or ("sysaccession" in d and d["sysaccession"].startswith("TRGT")):
-                        dict_list.append(d)
-                    else:
-                        logging.warning("All records in %s without a valid system accession or user accession will be skipped during update with saveacc flag!" % Sheet)
+                if d["user_accession"].startswith(accession_rule) or ("sysaccession" in d and d["sysaccession"].startswith("TRGT")):
+                    dict_list.append(d)
                 else:
-                    if d["sysaccession"].startswith("TRGT"):
-                        dict_list.append(d)
-                    else:
-                        logging.warning("All records in %s without a valid system accession will be skipped during update!" % Sheet)
+                    logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % Sheet)
             else:
-                if acc_save:
-                    if d["user_accession"] != 'NA':
-                        dict_list.append(d)
-                    else:
-                        logging.error("User accession in %s cannot be empty with saveacc flag!" % Sheet)
-                        # dict_list.append(d)  # temporary to import ENCODE data
-                        sys.exit(1)  # temporary to import ENCODE data
+                if d["user_accession"].startswith(accession_rule):
+                    dict_list.append(d)
                 else:
-                    if d["user_accession"] == 'NA':
-                        randomid = uuid.uuid1()
-                        d["user_accession"] = accession_rule + str(randomid)
-                        dict_list.append(d)
-                    else:
-                        dict_list.append(d)
-                        # logging.error("There has to be a valid user accession in %s" % Sheet)
-                        # sys.exit(1)
+                    logging.error("User accession in %s cannot be empty now!" % Sheet)
+                    # dict_list.append(d)  # temporary to import ENCODE data
+                    sys.exit(1)  # temporary to import ENCODE data
 
         all_sheets[Sheet] = dict_list
 
@@ -301,184 +231,153 @@ def request(url, parameter="", method="", bearer_token=""):
             return ResponseDict
 
 
-def accession_check(metadata, url, SheetToTable, mode, acc_save, user_name):  # if there is duplicated user accession number.
+def accession_check(metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
     if not mode:  # user_accession exits always.
-        if acc_save:
-            for Sheet in metadata:
-                table = SheetToTable[Sheet]
-                fullurl = url + '/api/' + table
-                existing = request(fullurl)
-                # check if user_accession and user combination in the database.
-                # if not SheetToTable[Sheet] in existing:
-                #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
-                #     sys.exit(1)
-                # redundant_user_accession = 0
-                # for DB_entries in existing[SheetToTable[Sheet]]:
-                #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\n" % (tempAcsn, DB_entries["user"], tempAcsn))
-                #         redundant_user_accession = 1
-                #         continue
-                # if redundant_user_accession == 0:
-                existing_user_accession = [x['user_accession'] for x in existing[table] if x["user"] == user_name]
-                accessionlist = []
-                # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
-                # delete_i = []  # Hold all index to be deleted.
-                for i, records in enumerate(metadata[Sheet]):
-                    user_accession = records["user_accession"]
-                    if user_accession == 'NA':
-                        logging.error("please provide user accession for all rows in %s" % Sheet)
-                        sys.exit(1)
-                    elif user_accession not in accessionlist:
-                        if user_accession not in existing_user_accession:
-                            accessionlist.append(user_accession)
-                        else:
-                            existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
-                            logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
-                            if len(existing_sys_acc) == 1:
-                                if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
-                                    logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
-                                    sys.exit(1)
-                                else:
-                                    metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
-                                # replace_accession(metadata, user_accession, existing_sys_acc[0])
-                            else:
-                                logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
-                                sys.exit(1)
-                            # delete_i.append(i)
-
-                            # if replace == 1:
-                            #     logging.warning("Replace %s in %s with a new user accession." % (user_accession, Sheet))
-                            #     replace_accession(metadata, user_accession)
-                            # elif replace == 2:
-                            #     # delete current record
-                            #     delete_i.append(i)
-                            # else:
-                            #     prompt = input('Here are your options:\n1) submit %s as a new record to the database anyway;\n2) submit all the rows in the excel with redundant user accession to database as new records;\n'
-                            #                    '3) skip %s because it has been submitted before;\n4) skip all rows with redundant user accession.\n\n'
-                            #                    'Please type 1 or 2 or 3 or 4:    ' % (user_accession, user_accession))
-                            #     if prompt == '1':
-                            #         logging.warning("Ok, I will replace %s in %s with a new accession." % (user_accession, Sheet))
-                            #         replace_accession(metadata, user_accession)
-                            #     elif prompt == '2':
-                            #         confirm_prompt = input("Are you sure all your data in the excel are new records? If you can confirm, all the following redundant records in the excel will be automatically uploaded.\n\
-                            #             Please typle Yes or No:    ")
-                            #         if confirm_prompt == "Yes" or confirm_prompt == "yes" or confirm_prompt == "Y" or confirm_prompt == "y":
-                            #             logging.warning("Replace %s in %s with a new user accession." % user_accession, Sheet)
-                            #             replace_accession(metadata, user_accession)
-                            #             replace = 1
-                            #         else:
-                            #             logging.warning("Ok, I will only replace %s in the submission with a new user accession." % user_accession)
-                            #             replace_accession(metadata, user_accession)
-                            #     elif prompt == '3':
-                            #         # delete this record
-                            #         delete_i.append(i)
-                            #     elif prompt == '4':
-                            #         # delete this record
-                            #         logging.warning("Ok, always skip the row with redundant user accession!")
-                            #         delete_i.append(i)
-                            #         replace = 2
-                            #     else:
-                            #         logging.error("Please provide valid response! (1,2,3,4)")
-                            #         sys.exit(1)
-
-                    else:
-                        logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
-                        sys.exit(1)
-                # for i in sorted(delete_i, key=int, reverse=True):
-                #     logging.warning("Skip %s in %s!" % (metadata[Sheet][i]['user_accession'], Sheet))
-                #     metadata[Sheet].pop(i)
-        else:
-            for Sheet in metadata:
-                table = SheetToTable[Sheet]
-                accessionlist = []
-                # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
-                for i, records in enumerate(metadata[Sheet]):
-                    user_accession = records["user_accession"]
-                    if user_accession not in accessionlist:
+        for Sheet in metadata:
+            table = SheetToTable[Sheet]
+            fullurl = url + '/api/' + table
+            existing = request(fullurl)
+            # check if user_accession and user combination in the database.
+            # if not SheetToTable[Sheet] in existing:
+            #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+            #     sys.exit(1)
+            # redundant_user_accession = 0
+            # for DB_entries in existing[SheetToTable[Sheet]]:
+            #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+            #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\n" % (tempAcsn, DB_entries["user"], tempAcsn))
+            #         redundant_user_accession = 1
+            #         continue
+            # if redundant_user_accession == 0:
+            existing_user_accession = [x['user_accession'] for x in existing[table] if x["user"] == user_name]
+            accessionlist = []
+            # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
+            # delete_i = []  # Hold all index to be deleted.
+            for i, records in enumerate(metadata[Sheet]):
+                user_accession = records["user_accession"]
+                if user_accession == 'NA':
+                    logging.error("please provide user accession for all rows in %s" % Sheet)
+                    sys.exit(1)
+                elif user_accession not in accessionlist:
+                    if user_accession not in existing_user_accession:
                         accessionlist.append(user_accession)
-                        new_accession = replace_accession(metadata, user_accession)
-                        logging.info("user accession %s has been replaced by %s!" % (user_accession, new_accession))
-
                     else:
-                        logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
-                        sys.exit(1)
+                        existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
+                        logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
+                        if len(existing_sys_acc) == 1:
+                            if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
+                                logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
+                                sys.exit(1)
+                            else:
+                                metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
+                            # replace_accession(metadata, user_accession, existing_sys_acc[0])
+                        else:
+                            logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
+                            sys.exit(1)
+                        # delete_i.append(i)
+
+                        # if replace == 1:
+                        #     logging.warning("Replace %s in %s with a new user accession." % (user_accession, Sheet))
+                        #     replace_accession(metadata, user_accession)
+                        # elif replace == 2:
+                        #     # delete current record
+                        #     delete_i.append(i)
+                        # else:
+                        #     prompt = input('Here are your options:\n1) submit %s as a new record to the database anyway;\n2) submit all the rows in the excel with redundant user accession to database as new records;\n'
+                        #                    '3) skip %s because it has been submitted before;\n4) skip all rows with redundant user accession.\n\n'
+                        #                    'Please type 1 or 2 or 3 or 4:    ' % (user_accession, user_accession))
+                        #     if prompt == '1':
+                        #         logging.warning("Ok, I will replace %s in %s with a new accession." % (user_accession, Sheet))
+                        #         replace_accession(metadata, user_accession)
+                        #     elif prompt == '2':
+                        #         confirm_prompt = input("Are you sure all your data in the excel are new records? If you can confirm, all the following redundant records in the excel will be automatically uploaded.\n\
+                        #             Please typle Yes or No:    ")
+                        #         if confirm_prompt == "Yes" or confirm_prompt == "yes" or confirm_prompt == "Y" or confirm_prompt == "y":
+                        #             logging.warning("Replace %s in %s with a new user accession." % user_accession, Sheet)
+                        #             replace_accession(metadata, user_accession)
+                        #             replace = 1
+                        #         else:
+                        #             logging.warning("Ok, I will only replace %s in the submission with a new user accession." % user_accession)
+                        #             replace_accession(metadata, user_accession)
+                        #     elif prompt == '3':
+                        #         # delete this record
+                        #         delete_i.append(i)
+                        #     elif prompt == '4':
+                        #         # delete this record
+                        #         logging.warning("Ok, always skip the row with redundant user accession!")
+                        #         delete_i.append(i)
+                        #         replace = 2
+                        #     else:
+                        #         logging.error("Please provide valid response! (1,2,3,4)")
+                        #         sys.exit(1)
+
+                else:
+                    logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
+                    sys.exit(1)
+            # for i in sorted(delete_i, key=int, reverse=True):
+            #     logging.warning("Skip %s in %s!" % (metadata[Sheet][i]['user_accession'], Sheet))
+            #     metadata[Sheet].pop(i)
 
     else:
-        if acc_save:
-            for Sheet in metadata:
-                table = SheetToTable[Sheet]
-                fullurl = url + '/api/' + table
-                existing = request(fullurl)
-                # check if user_accession and user combination in the database.
-                # if not SheetToTable[Sheet] in existing:
-                #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
-                #     sys.exit(1)
-                # redundant_user_accession = 0
-                # for DB_entries in existing[SheetToTable[Sheet]]:
-                #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
-                #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\n" % (tempAcsn, DB_entries["user"], tempAcsn))
-                #         redundant_user_accession = 1
-                #         continue
-                # if redundant_user_accession == 0:
-                existing_user_accession = [x['user_accession'] for x in existing[table] if "user_accession" in x and x["user"] == user_name]
-                existing_sys_accession = [x['sysaccession'] for x in existing[table] if "sysaccession" in x and x["user"] == user_name]
-                accessionlist = []
-                sysaccession_list = []
-                # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
-                # delete_i = []  # Hold all index to be deleted.
-                for i, records in enumerate(metadata[Sheet]):
-                    user_accession = 'NA'
-                    sysaccession = 'NA'
-                    if "user_accession" in records:
-                        user_accession = records["user_accession"]
-                    if "sysaccession" in records:
-                        sysaccession = records["sysaccession"]
-                    if user_accession == 'NA':
-                        if sysaccession not in sysaccession_list:
-                            if sysaccession not in existing_sys_accession:
-                                logging.error("system accession %s in %s does not exist in our database, unable to update it!" % (sysaccession, Sheet))
-                                sys.exit(1)
-                            else:
-                                sysaccession_list.append(sysaccession)
-                                records.pop("user_accession")
-                        else:
-                            logging.error("redundant system accession %s in %s!" % (sysaccession, Sheet))
-                            sys.exit(1)
-                    elif user_accession not in accessionlist:
-                        if user_accession not in existing_user_accession:
-                            logging.error("user accession %s in %s does not exist in our database, unable to update it!" % (user_accession, Sheet))
+        for Sheet in metadata:
+            table = SheetToTable[Sheet]
+            fullurl = url + '/api/' + table
+            existing = request(fullurl)
+            # check if user_accession and user combination in the database.
+            # if not SheetToTable[Sheet] in existing:
+            #     logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
+            #     sys.exit(1)
+            # redundant_user_accession = 0
+            # for DB_entries in existing[SheetToTable[Sheet]]:
+            #     if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
+            #         logging.info("Seems record %s submitted by %s already exists in the database.\nIf %s in the excel has been uploaded to the database, ignore this warning.\n" % (tempAcsn, DB_entries["user"], tempAcsn))
+            #         redundant_user_accession = 1
+            #         continue
+            # if redundant_user_accession == 0:
+            existing_user_accession = [x['user_accession'] for x in existing[table] if "user_accession" in x and x["user"] == user_name]
+            existing_sys_accession = [x['sysaccession'] for x in existing[table] if "sysaccession" in x and x["user"] == user_name]
+            accessionlist = []
+            sysaccession_list = []
+            # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
+            # delete_i = []  # Hold all index to be deleted.
+            for i, records in enumerate(metadata[Sheet]):
+                user_accession = 'NA'
+                sysaccession = 'NA'
+                if "user_accession" in records:
+                    user_accession = records["user_accession"]
+                if "sysaccession" in records:
+                    sysaccession = records["sysaccession"]
+                if user_accession == 'NA':
+                    if sysaccession not in sysaccession_list:
+                        if sysaccession not in existing_sys_accession:
+                            logging.error("system accession %s in %s does not exist in our database, unable to update it!" % (sysaccession, Sheet))
                             sys.exit(1)
                         else:
-                            accessionlist.append(user_accession)
-                            existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
-                            logging.info("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
-                            if len(existing_sys_acc) == 1:
-                                if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
-                                    logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
-                                    sys.exit(1)
-                                else:
-                                    metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
-                                # replace_accession(metadata, user_accession, existing_sys_acc[0])
-                            else:
-                                logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
-                                sys.exit(1)
+                            sysaccession_list.append(sysaccession)
+                            records.pop("user_accession")
                     else:
-                        logging.error("redundant user accession %s in %s!" % (user_accession, Sheet))
+                        logging.error("redundant system accession %s in %s!" % (sysaccession, Sheet))
                         sys.exit(1)
-        else:
-            for Sheet in metadata:
-                sysaccession_list = []
-                for records in metadata[Sheet]:
-                    if "sysaccession" in records:
-                        sys_accession = records["sysaccession"]
-                        if sys_accession not in sysaccession_list:
-                            sysaccession_list.append(sys_accession)
-                        else:
-                            logging.error("duplicated system accession %s in %s! If you want to update the record, do it in a single row." % (sys_accession, Sheet))
-                            sys.exit(1)
+                elif user_accession not in accessionlist:
+                    if user_accession not in existing_user_accession:
+                        logging.error("user accession %s in %s does not exist in our database, unable to update it!" % (user_accession, Sheet))
+                        sys.exit(1)
                     else:
-                        logging.warning("system accession is required duing update mode. Seems there is at least one row in %s does not have system accession." % (Sheet))
-                        # sys.exit(1)
+                        accessionlist.append(user_accession)
+                        existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
+                        logging.info("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
+                        if len(existing_sys_acc) == 1:
+                            if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
+                                logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
+                                sys.exit(1)
+                            else:
+                                metadata[Sheet][i]["sysaccession"] = existing_sys_acc[0]
+                            # replace_accession(metadata, user_accession, existing_sys_acc[0])
+                        else:
+                            logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
+                            sys.exit(1)
+                else:
+                    logging.error("redundant user accession %s in %s!" % (user_accession, Sheet))
+                    sys.exit(1)
 
 
 def replace_accession(metadata, user_accession, new_accession=""):
