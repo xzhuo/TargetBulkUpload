@@ -186,12 +186,17 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                 else:
                     logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % Sheet)
             else:
-                if d["user_accession"].startswith(accession_rule):
-                    dict_list.append(d)
+                if d["sysaccession"].startswith("TRGT"):
+                    logging.info("Skip %s in %s" % (d["sysaccession"], Sheet))
+                elif d["sysaccession"] != '':
+                    logging.error("Invalid system accession %s in %s!" % (d["sysaccession"], Sheet))
                 else:
-                    logging.error("User accession in %s cannot be empty now!" % Sheet)
-                    # dict_list.append(d)  # temporary to import ENCODE data
-                    sys.exit(1)  # temporary to import ENCODE data
+                    if d["user_accession"].startswith(accession_rule):
+                        dict_list.append(d)
+                    else:
+                        logging.error("Please provide valid User accessions in %s!" % Sheet)
+                        # dict_list.append(d)  # temporary to import ENCODE data
+                        sys.exit(1)  # temporary to import ENCODE data
 
         all_sheets[Sheet] = dict_list
 
