@@ -403,6 +403,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
     saved_submission_url = url_submit + "/api/submission"
     orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File", "Experiment"]
+    noerror = 0
     for Sheet in orderList:
         print("\nworking on: ")
         print(Sheet)
@@ -442,7 +443,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             # check if user_accession and user combination in the database.
                             if not SheetToTable[Sheet] in existing:
                                 logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
-                                sys.exit(1)
+                                noerror = 1
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
@@ -468,7 +469,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                             if Acsn is None:
                                 logging.error("POST request failed!")
-                                sys.exit(1)
+                                noerror = 1
                             else:
                                 AcsnDict[Sheet][tempAcsn] = Acsn
                                 if SheetToTable[Sheet] in submission_log:
@@ -509,7 +510,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             # check if user_accession and user combination in the database.
                             if not SheetToTable[Sheet] in existing:
                                 logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
-                                sys.exit(1)
+                                noerror = 1
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
@@ -554,7 +555,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                             if Acsn is None:
                                 logging.error("POST request failed!")
-                                sys.exit(1)
+                                noerror = 1
                             else:
                                 linkDict[Sheet][Acsn] = tempDict
                                 AcsnDict[Sheet][tempAcsn] = Acsn
@@ -566,7 +567,10 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                 logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
 
     # ipdb.set_trace()
-    print("all the record uploaded/updated, it is time to connect all the relationships!\n")
+    if noerror:
+        sys.exit("something wrong processing the excel file, quitting...")
+    else:
+        print("all the record uploaded/updated, it is time to connect all the relationships!\n")
     for Sheet in orderList:
         if Sheet in linkDict:
             fullurl = url + '/api/' + SheetToTable[Sheet]
