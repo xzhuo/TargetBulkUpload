@@ -253,7 +253,9 @@ def accession_check(metadata, url, SheetToTable, mode, user_name):  # if there i
             #         redundant_user_accession = 1
             #         continue
             # if redundant_user_accession == 0:
-            existing_user_accession = [x['user_accession'] for x in existing[table] if x["user"] == user_name]
+            import ipdb
+            ipdb.set_trace()
+            existing_user_accession = [x['user_accession'] for x in existing[table] if ('user_accession' in x and x["user"] == user_name)]
             accessionlist = []
             # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
             # delete_i = []  # Hold all index to be deleted.
