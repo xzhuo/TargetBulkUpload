@@ -161,15 +161,15 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                     data_type = "text"
                 # data_type = "text"  # wait until the correct type set!! Temporary line here
                 if column_name == "NA":
-                    logging.warning("field name %s from %s in excel is not in the database!" % (Column_name, Sheet))
+                    logging.warning("field name %s from %s in excel is not in the database! Please download the latest excel template." % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
                     if column_name == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession.
                         # randomid = uuid.uuid1()
                         value = 'NA'  # accession_rule + str(randomid)
 
-                    if column_name == "strand_specificity":
-                        value = "TRUE"  # not enough, there are other restricted columns
+                    # if column_name == "strand_specificity":
+                    #     value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or column_name == "sysaccession":
                     # if value != '' or column_name == "sysaccession" or mode:  # Sys accession always true. in upload mode, only non empty value TRUE. in update mode, everything TRUE.
                         ctype = sheet.cell(row_index, col_index).ctype
@@ -186,9 +186,9 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                 else:
                     logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % Sheet)
             else:
-                if d["sysaccession"].startswith("TRGT"):
+                if "sysaccession" in d and d["sysaccession"].startswith("TRGT"):
                     logging.info("Skip %s in %s" % (d["sysaccession"], Sheet))
-                elif d["sysaccession"] != '':
+                elif "sysaccession" in d and d["sysaccession"] != '':
                     logging.error("Invalid system accession %s in %s!" % (d["sysaccession"], Sheet))
                 else:
                     if d["user_accession"].startswith(accession_rule):
