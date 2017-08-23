@@ -174,7 +174,10 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                     # if value != '' or column_name == "sysaccession" or mode:  # Sys accession always true. in upload mode, only non empty value TRUE. in update mode, everything TRUE.
                         ctype = sheet.cell(row_index, col_index).ctype
                         if data_type == "text":
-                            d[column_name] = str(value).rstrip()  # use string for now. May use number later.
+                            if ctype == 2:
+                                d[column_name] = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+                            else:
+                                d[column_name] = str(value).rstrip()  # use string for now. May use number later.
                         elif data_type == "date" and ctype == 3:
                             # ipdb.set_trace()
                             d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
@@ -445,6 +448,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             if not SheetToTable[Sheet] in existing:
                                 logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 noerror = 1
+                                continue
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
@@ -471,6 +475,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             if Acsn is None:
                                 logging.error("POST request failed!")
                                 noerror = 1
+                                continue
                             else:
                                 AcsnDict[Sheet][tempAcsn] = Acsn
                                 if SheetToTable[Sheet] in submission_log:
@@ -512,6 +517,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             if not SheetToTable[Sheet] in existing:
                                 logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 noerror = 1
+                                continue
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
@@ -557,6 +563,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             if Acsn is None:
                                 logging.error("POST request failed!")
                                 noerror = 1
+                                continue
                             else:
                                 linkDict[Sheet][Acsn] = tempDict
                                 AcsnDict[Sheet][tempAcsn] = Acsn
@@ -592,7 +599,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
                             logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
                                           (Acsn, Sheet, linkDict[Sheet][Acsn][connection_name], linkDict[Sheet][Acsn][connection_name], LinkTo))
-                            sys.exit(1)
+                            noerror = 1
                         else:
                             linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
                     # else:  # temporary for ENCODE data 3 lines.
@@ -609,10 +616,12 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
                     elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
                         logging.error("%s relationships is not linked, seems like an error!" % (Acsn))
-                        sys.exit(1)
+                        noerror = 1
                     else:
                         logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
-    if bool(submission_log):  # Only save not empty submissions.
+    if noerror:
+        sys.exit("something wrong establishing relationships in the excel file, quitting...")
+    if bool(submission_log) and not mode:  # Only save not empty submissions, and don's save update submissions.
         submission_details = {"details": json.dumps(submission_log)}
         submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
         if submitted_logs["statusCode"] == 201:
