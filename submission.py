@@ -164,15 +164,19 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                     logging.warning("field name %s from %s in excel is not in the database! Please download the latest excel template." % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
+                    ctype = sheet.cell(row_index, col_index).ctype
                     if column_name == "user_accession" and (value == "NA" or value == ''):  # delete 'NA' in user_accession.
                         # randomid = uuid.uuid1()
                         value = 'NA'  # accession_rule + str(randomid)
 
-                    # if column_name == "strand_specificity":
-                    #     value = "TRUE"  # not enough, there are other restricted columns
+                    if ctype == 4:  # boolean
+                        if value:
+                            value = "TRUE"
+                        else:
+                            value = "FALSE"
+                        # value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or column_name == "sysaccession":
                     # if value != '' or column_name == "sysaccession" or mode:  # Sys accession always true. in upload mode, only non empty value TRUE. in update mode, everything TRUE.
-                        ctype = sheet.cell(row_index, col_index).ctype
                         if data_type == "text":
                             if ctype == 2:
                                 d[column_name] = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
