@@ -1,8 +1,21 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2017-08-23
+### changes committed
 
-## [0.3.1] - 2-17-08-16
+* Delete template option.
+* Delete saveacc option, enforce all uploading using unique user accession.
+* Update mode directly post to PROD database.
+* Require user accession to follow accession rule.
+* Fix the “strand_specificity” always true bug.
+* Print out all the failed post requests before quit
+
+## TODO
+* enable delete records and links using script.
+
+
+## [0.3.1] - 2017-08-16
 ### changes committed
 * Now it supportes update records using user accession and link records using user accession (with --saveacc flag)
 * User accession now does not require a string start with "USR" anymore.
