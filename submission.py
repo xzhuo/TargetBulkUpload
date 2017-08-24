@@ -627,8 +627,8 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                         logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
     if noerror:
         sys.exit("something wrong establishing relationships in the excel file, quitting...")
-    if bool(submission_log) and not mode:  # Only save not empty submissions, and don's save update submissions.
-        submission_details = {"details": json.dumps(submission_log)}
+    if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
+        submission_details = {"details": json.dumps(submission_log), "update": mode}
         submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
         if submitted_logs["statusCode"] == 201:
             logging.info("Submission has been successfully saved as %s!" % submitted_logs["submission_id"])
