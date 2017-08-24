@@ -349,7 +349,7 @@ def accession_check(metadata, url, SheetToTable, mode, user_name):  # if there i
             #         continue
             # if redundant_user_accession == 0:
             existing_user_accession = [x['user_accession'] for x in existing[table] if "user_accession" in x and x["user"] == user_name]
-            existing_sys_accession = [x['sysaccession'] for x in existing[table] if "sysaccession" in x and x["user"] == user_name]
+            existing_sys_accession = [x['accession'] for x in existing[table] if "accession" in x and x["user"] == user_name]
             accessionlist = []
             sysaccession_list = []
             # replace = 0  # if replace is 1, it will automatically replace redundant user accession to a new uuid. if it is 2, all redundant user accessions will be deleted.
