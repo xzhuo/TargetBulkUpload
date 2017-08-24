@@ -324,7 +324,7 @@ def accession_check(metadata, url, SheetToTable, mode, user_name):  # if there i
                         #         sys.exit(1)
 
                 else:
-                    logging.error("duplicated user accession %s in %s! Please alway use unique user accession in a excel file!" % (user_accession, Sheet))
+                    logging.error("duplicated user accession %s in %s! Please always use unique user accession in an excel file!" % (user_accession, Sheet))
                     sys.exit(1)
             # for i in sorted(delete_i, key=int, reverse=True):
             #     logging.warning("Skip %s in %s!" % (metadata[Sheet][i]['user_accession'], Sheet))
@@ -582,7 +582,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
     if noerror:
         sys.exit("something wrong processing the excel file, quitting...")
     else:
-        print("all the record uploaded/updated, it is time to connect all the relationships!\n")
+        print("all the records uploaded/updated, it is time to connect all the relationships!\n")
     for Sheet in orderList:
         if Sheet in linkDict:
             fullurl = url + '/api/' + SheetToTable[Sheet]
