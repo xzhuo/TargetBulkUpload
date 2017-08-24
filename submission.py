@@ -176,7 +176,6 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                             value = "FALSE"
                         # value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or column_name == "sysaccession":
-                    # if value != '' or column_name == "sysaccession" or mode:  # Sys accession always true. in upload mode, only non empty value TRUE. in update mode, everything TRUE.
                         if data_type == "text":
                             if ctype == 2:
                                 d[column_name] = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
@@ -185,6 +184,9 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                         elif data_type == "date" and ctype == 3:
                             # ipdb.set_trace()
                             d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
+                        elif data_type == "number" and value == 'NA':  # assign number field to -1 if it is NA in the excel.
+                            d[column_name] = -1
+                            logging.info("Change NA to -1 for %s in %s." % (column_name, Sheet))
                         else:
                             d[column_name] = value
             if mode:
