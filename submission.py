@@ -111,13 +111,13 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest or args.mode:
-        accession_check(submission, url_meta, SheetToTable, args.mode, user_name)
-        upload(submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
+        accession_check(args.notest, submission, url_meta, SheetToTable, args.mode, user_name)
+        upload(args.notest, submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
-        accession_check(submission, testurl_meta, SheetToTable, args.mode, user_name)
+        accession_check(args.notest, submission, testurl_meta, SheetToTable, args.mode, user_name)
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
-        upload(submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
+        upload(args.notest, submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
             now you can upload the same file to real database with the '--notest' flag if you are using command line, \
             if you are using our website uploading excel then click the submit button.")
@@ -245,7 +245,7 @@ def request(url, parameter="", method="", bearer_token=""):
             return ResponseDict
 
 
-def accession_check(metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
+def accession_check(notest, metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
     if not mode:  # user_accession exits always.
         for Sheet in metadata:
             table = SheetToTable[Sheet]
@@ -274,6 +274,8 @@ def accession_check(metadata, url, SheetToTable, mode, user_name):  # if there i
                     sys.exit(1)
                 elif user_accession not in accessionlist:
                     if user_accession not in existing_user_accession:
+                        accessionlist.append(user_accession)
+                    elif not notest:  # if it is test in DEV1, also append it for post request.
                         accessionlist.append(user_accession)
                     else:
                         existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
@@ -407,7 +409,7 @@ def replace_accession(metadata, user_accession, new_accession=""):
     return new_accession
 
 
-def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
+def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
     AcsnDict = {}
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
@@ -431,7 +433,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
             fullurl = url + '/api/' + SheetToTable[Sheet]
             if Sheet not in relationship_connectto or len(relationship_connectto[Sheet]) == 0:  # if nothing to connect in the database during bulk upload
                 for entry in metadata[Sheet]:  # metadata[Sheet] is a list of dicts.
-                    if mode:  # if it is update mode: system accession required!
+                    if mode:  # if it is update mode:
                         if "sysaccession" in entry and len(entry["sysaccession"]) > 0:
                             Acsn = entry.pop("sysaccession")
                             if "user_accession" in entry and len(entry["user_accession"]) > 0:
@@ -447,7 +449,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                 submission_log[SheetToTable[Sheet]].append(Acsn)
                             logging.info("record %s has been updated!" % Acsn)
                             AcsnDict[Sheet][tempAcsn] = Acsn
-                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:  # don't worry this block now, I have all user_accession popped in update during accession_check.
+                        elif "user_accession" in entry and len(entry["user_accession"]) > 0:
                             tempAcsn = entry["user_accession"]
                             existing = request(fullurl)
                             # check if user_accession and user combination in the database.
@@ -473,7 +475,7 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                             AcsnDict[Sheet][tempAcsn] = entry["sysaccession"]
                             continue
                         else:
-                            tempAcsn = entry["user_accession"]  # if user_accession does not exist in the excel, it will be automatically generated by uuid in upload mode. So, user_accession always exists here.
+                            tempAcsn = entry["user_accession"]  # user_accession always exists here.
                             if "sysaccession" in entry:
                                 entry.pop("sysaccession")
 
@@ -489,7 +491,10 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                 else:
                                     submission_log[SheetToTable[Sheet]] = []
                                     submission_log[SheetToTable[Sheet]].append(Acsn)
-                                logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
+                                if notest:
+                                    logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
+                                else:
+                                    logging.info("Record %s has been successfully validated!" % tempAcsn)
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[Sheet] = {}
@@ -578,55 +583,61 @@ def upload(metadata, relationship_connectto, SheetToTable, url, url_submit, user
                                 else:
                                     submission_log[SheetToTable[Sheet]] = []
                                     submission_log[SheetToTable[Sheet]].append(Acsn)
-                                logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
+                                if notest:
+                                    logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
+                                else:
+                                    logging.info("Record %s has been successfully validated." % (tempAcsn))
+
 
     # ipdb.set_trace()
     if noerror:
         sys.exit("something wrong processing the excel file, quitting...")
-    else:
-        print("all the records uploaded/updated, it is time to connect all the relationships!\n")
-    for Sheet in orderList:
-        if Sheet in linkDict:
-            fullurl = url + '/api/' + SheetToTable[Sheet]
-            for Acsn in linkDict[Sheet]:
-                for connection_name in linkDict[Sheet][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
-                    # regex connection_name here. if true, use it directly, otherwise use relationship_connectto[Sheet][connection_name]:  I don't understand the comment now.
-                    # linkTo = AcsnDict[Sheet][relationship_connectto[Sheet][connection_name]]
-                    if linkDict[Sheet][Acsn][connection_name] == 'NA':
-                        continue
-                    linkTo = relationship_connectto[Sheet][connection_name]
-                    LinkTo = linkTo[:1].upper() + linkTo[1:]
-                    linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
-                    if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
-                        linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
-                    else:  # no longer need user accession start with USR
-                    # elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):  # temporary for ENCODE data
-                        # ipdb.set_trace()
-                        if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
-                            logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
-                                          (Acsn, Sheet, linkDict[Sheet][Acsn][connection_name], linkDict[Sheet][Acsn][connection_name], LinkTo))
+    elif notest:
+        logging.info("all the records uploaded/updated, it is time to connect all the relationships!\n")
+        for Sheet in orderList:
+            if Sheet in linkDict:
+                fullurl = url + '/api/' + SheetToTable[Sheet]
+                for Acsn in linkDict[Sheet]:
+                    for connection_name in linkDict[Sheet][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
+                        # regex connection_name here. if true, use it directly, otherwise use relationship_connectto[Sheet][connection_name]:  I don't understand the comment now.
+                        # linkTo = AcsnDict[Sheet][relationship_connectto[Sheet][connection_name]]
+                        if linkDict[Sheet][Acsn][connection_name] == 'NA':
+                            continue
+                        linkTo = relationship_connectto[Sheet][connection_name]
+                        LinkTo = linkTo[:1].upper() + linkTo[1:]
+                        linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
+                        if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
+                            linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
+                        else:  # no longer need user accession start with USR
+                        # elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):  # temporary for ENCODE data
+                            # ipdb.set_trace()
+                            if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
+                                logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
+                                              (Acsn, Sheet, linkDict[Sheet][Acsn][connection_name], linkDict[Sheet][Acsn][connection_name], LinkTo))
+                                noerror = 1
+                            else:
+                                linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
+                        # else:  # temporary for ENCODE data 3 lines.
+                        #     logging.warning("%s is not a valid accession. %s %s relationship %s is not established." %
+                        #                     (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
+
+                        if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
+                            # linkBody = {SheetToTable[linkTo]['Acsn']: linkDict[Sheet][Acsn][connection_name], "connectionName": "assay_input"}
+                            linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": "assay_input"}
+                        else:
+                            linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": connection_name}
+                        responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
+                        if responsestatus["statusCode"] == 200:
+                            logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
+                        elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
+                            logging.error("%s relationships is not linked, seems like an error! Please correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
                             noerror = 1
                         else:
-                            linkTo_TRGTacc = AcsnDict[LinkTo][linkDict[Sheet][Acsn][connection_name]]
-                    # else:  # temporary for ENCODE data 3 lines.
-                    #     logging.warning("%s is not a valid accession. %s %s relationship %s is not established." %
-                    #                     (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
-
-                    if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
-                        # linkBody = {SheetToTable[linkTo]['Acsn']: linkDict[Sheet][Acsn][connection_name], "connectionName": "assay_input"}
-                        linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": "assay_input"}
-                    else:
-                        linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": connection_name}
-                    responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
-                    if responsestatus["statusCode"] == 200:
-                        logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
-                    elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
-                        logging.error("%s relationships is not linked, seems like an error!" % (Acsn))
-                        noerror = 1
-                    else:
-                        logging.warning("%s relationships is not linked. Make sure it does not matter if you want to proceed." % (Acsn))
-    if noerror:
-        sys.exit("something wrong establishing relationships in the excel file, quitting...")
+                            logging.warning("%s relationships is not linked. Make sure it does not matter. Or you can correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
+        if noerror:
+            sys.exit("something wrong establishing relationships in the excel file, quitting...")
+    else:
+        logging.info("We did not verify relationships between records in your excel, but everything else looks fine!")
     if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
         submission_details = {"details": json.dumps(submission_log), "update": mode}
         submitted_logs = request(saved_submission_url, json.dumps(submission_details), 'POST', bearer_token)
