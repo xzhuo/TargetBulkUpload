@@ -592,7 +592,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
     # ipdb.set_trace()
     if noerror:
         sys.exit("something wrong processing the excel file, quitting...")
-    elif notest:
+    elif notest or mode:
         logging.info("all the records uploaded/updated, it is time to connect all the relationships!\n")
         for Sheet in orderList:
             if Sheet in linkDict:
