@@ -232,10 +232,10 @@ def request(url, parameter="", method="", bearer_token=""):
         ResponseData = e.read().decode("utf8", 'ignore')
         ResponseDict = json.loads(ResponseData)
         logging.error(ResponseDict["message"])
-        sys.exit(1)
+        # sys.exit(1)
     except timeout:
         logging.error("Fail to create or update the following record to databse link %s. Please make sure the url used here is correct.\n%s" % (url, parameter))
-        sys.exit(1)
+        # sys.exit(1)
 
     else:
         ResponseDict = json.loads(response.read().decode())
