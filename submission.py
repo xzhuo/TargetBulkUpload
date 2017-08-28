@@ -176,7 +176,9 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                             value = "FALSE"
                         # value = "TRUE"  # not enough, there are other restricted columns
                     if value != '' or column_name == "sysaccession":
-                        if data_type == "text":
+                        if data_type == "textnumber":
+                            d[column_name] = value
+                        elif data_type == "text":
                             if ctype == 2:
                                 d[column_name] = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
                             else:
