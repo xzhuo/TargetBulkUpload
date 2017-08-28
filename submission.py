@@ -458,7 +458,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             if not SheetToTable[Sheet] in existing:
                                 logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 noerror = 1
-                                continue
+                                break
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
@@ -485,7 +485,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             if Acsn is None:
                                 logging.error("POST request failed!")
                                 noerror = 1
-                                continue
+                                break
                             else:
                                 AcsnDict[Sheet][tempAcsn] = Acsn
                                 if SheetToTable[Sheet] in submission_log:
@@ -530,7 +530,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             if not SheetToTable[Sheet] in existing:
                                 logging.error("Error getting records of %s from database" % SheetToTable[Sheet])
                                 noerror = 1
-                                continue
+                                break
                             userAcc_found = 0
                             for DB_entries in existing[SheetToTable[Sheet]]:
                                 if DB_entries["user_accession"] == tempAcsn and DB_entries["user"] == user_name:
@@ -576,7 +576,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             if Acsn is None:
                                 logging.error("POST request failed!")
                                 noerror = 1
-                                continue
+                                break
                             else:
                                 linkDict[Sheet][Acsn] = tempDict
                                 AcsnDict[Sheet][tempAcsn] = Acsn
