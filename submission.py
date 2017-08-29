@@ -14,9 +14,9 @@ url_meta = 'http://target.wustl.edu:7006'
 url_submit = 'http://target.wustl.edu:7002'
 testurl_meta = 'http://target.wustl.edu:8006'
 testurl_submit = 'http://target.wustl.edu:8002'
-
+versionurl = 'http://meta.target.wustl.edu/api/version'
 # hard code version for now, will get it from a url latter:
-versionNo = {"version": "2.0"}
+# versionNo = {"version": "2.0"}
 
 
 def get_args():
@@ -83,8 +83,9 @@ def main():
             x['name'] = 'assay_input_biosample'
         if x['display_name'] == "Library":
             x['name'] = 'assay_input_library'
-    if versionNo["version"] not in args.excel:
-        logging.error("the excel version does not match the current metadata database version. Please download the latest excel template.")
+    versionNo = request(versionurl)
+    if versionNo["current"] not in args.excel:
+        logging.error("the excel version does not match the current metadata database version %s. Please download the latest excel template." % versionNo["current"])
         sys.exit(1)
     relationship_connectto = {}  # relationship_name: table_name for connection fields.  {'Bioproject': {'works_on': 'lab'},...}
     ColumnnameToRelationship = {}  # display_column_name: relationship_name for connection fields.  {'Bioproject': {'Lab': 'works_on'},...}
