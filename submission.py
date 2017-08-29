@@ -232,19 +232,16 @@ def request(url, parameter="", method="", bearer_token=""):
         ResponseData = e.read().decode("utf8", 'ignore')
         ResponseDict = json.loads(ResponseData)
         logging.error(ResponseDict["message"])
+        return ResponseDict
         # sys.exit(1)
     except timeout:
         logging.error("Fail to create or update the following record to databse link %s. Please make sure the url used here is correct.\n%s" % (url, parameter))
+        return ResponseDict
         # sys.exit(1)
 
     else:
         ResponseDict = json.loads(response.read().decode())
-        if "accession" in ResponseDict:
-            return ResponseDict["accession"]
-        # elif len(ResponseDict) == 1:  # should have only one item.
-        #     return ResponseDict
-        else:
-            return ResponseDict
+        return ResponseDict
 
 
 def accession_check(notest, metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
@@ -443,7 +440,13 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             else:
                                 tempAcsn = Acsn
                             updateurl = fullurl + '/' + Acsn
-                            request(updateurl, json.dumps(entry), 'POST', bearer_token)
+                            response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
+                            if response['statusCode'] != 200:
+                                logging.error("%s update failed!" % Acsn)
+                                logging.error(response['message'])
+                                noerror = 1
+                                break
+
                             if SheetToTable[Sheet] in submission_log:
                                 submission_log[SheetToTable[Sheet]].append(Acsn)
                             else:
@@ -481,12 +484,13 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             if "sysaccession" in entry:
                                 entry.pop("sysaccession")
 
-                            Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
-                            if Acsn is None:
+                            response = request(fullurl, json.dumps(entry), 'POST', bearer_token)
+                            if "accession" not in response:
                                 logging.error("POST request failed!")
                                 noerror = 1
                                 break
                             else:
+                                Acsn = response["accession"]
                                 AcsnDict[Sheet][tempAcsn] = Acsn
                                 if SheetToTable[Sheet] in submission_log:
                                     submission_log[SheetToTable[Sheet]].append(Acsn)
@@ -514,7 +518,13 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                                 if key in entry:
                                     tempDict[key] = entry.pop(key)
                             updateurl = fullurl + '/' + Acsn
-                            request(updateurl, json.dumps(entry), 'POST', bearer_token)
+                            response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
+                            if response['statusCode'] != 200:
+                                logging.error("%s update failed!" % Acsn)
+                                logging.error(response['message'])
+                                noerror = 1
+                                break
+
                             logging.info("record %s has been updated!" % Acsn)
                             AcsnDict[Sheet][tempAcsn] = Acsn
                             linkDict[Sheet][Acsn] = tempDict
@@ -572,12 +582,13 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             for key in relationship_connectto[Sheet]:
                                 if key in entry:
                                     tempDict[key] = entry.pop(key)
-                            Acsn = request(fullurl, json.dumps(entry), 'POST', bearer_token)
-                            if Acsn is None:
+                            response = request(fullurl, json.dumps(entry), 'POST', bearer_token)
+                            if "accession" not in response:
                                 logging.error("POST request failed!")
                                 noerror = 1
                                 break
                             else:
+                                Acsn = response["accession"]
                                 linkDict[Sheet][Acsn] = tempDict
                                 AcsnDict[Sheet][tempAcsn] = Acsn
                                 if SheetToTable[Sheet] in submission_log:
