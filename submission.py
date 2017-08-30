@@ -209,7 +209,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                     if d["user_accession"].startswith(accession_rule):
                         dict_list.append(d)
                     else:
-                        logging.error("Please provide valid User accessions in %s!" % Sheet)
+                        logging.error("Please provide valid User accessions in %s! It should start with %s" % (Sheet, accession_rule))
                         # dict_list.append(d)  # temporary to import ENCODE data
                         sys.exit(1)  # temporary to import ENCODE data
 
@@ -695,7 +695,7 @@ def urlfields(kind, url):
             urljson = url + '/schema/' + table + '.json'
         elif kind == 'relationships':
             urljson = url + '/schema/relationships/' + table + '.json'
-        Table = table[:1].upper() + table[1:]
+        Table = table[:1].upper() + table[1:].lower()
         logging.debug(urljson)
         data = urllib.request.urlopen(urljson).read().decode('utf8')
         # str_data = data.readall().decode('utf-8')
