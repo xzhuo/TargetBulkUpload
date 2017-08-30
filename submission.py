@@ -417,7 +417,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
     saved_submission_url = url_submit + "/api/submission"
-    orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File", "Experiment"]
+    orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File", "Experiment", "Mergedfile"]
     noerror = 0
     for Sheet in orderList:
         print("\nworking on: ")
@@ -621,13 +621,12 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                         if linkDict[Sheet][Acsn][connection_name] == 'NA':
                             continue
                         linkTo = relationship_connectto[Sheet][connection_name]
-                        LinkTo = linkTo[:1].upper() + linkTo[1:]
+                        LinkTo = linkTo[:1].upper() + linkTo[1:].lower()
                         linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
                         if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
                             linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
                         else:  # no longer need user accession start with USR
                         # elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):  # temporary for ENCODE data
-                            # ipdb.set_trace()
                             if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
                                 logging.error("Can't connect %s in %s to %s. Accession %s cannot be found in %s. Please make sure all the connections have valid accessions." %
                                               (Acsn, Sheet, linkDict[Sheet][Acsn][connection_name], linkDict[Sheet][Acsn][connection_name], LinkTo))
@@ -683,7 +682,7 @@ def getfields():
                             line = '"' + line[:index] + '"' + line[index:]
                     string = string + line
         string = string + '}]'
-        Table = table[:1].upper() + table[1:]
+        Table = table[:1].upper() + table[1:].lower()
         allfieldnames[Table] = json.loads(string)
     return allfieldnames
 
