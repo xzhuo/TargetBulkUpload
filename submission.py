@@ -8,6 +8,7 @@ import argparse
 import logging
 import datetime
 import uuid  # used to generate unique user accesion if it is not provided.
+import pprint
 from socket import timeout
 
 url_meta = 'http://target.wustl.edu:7006'
@@ -68,6 +69,7 @@ def get_args():
 def main():
     logging.getLogger().setLevel(logging.INFO)  # Do I need a flag to change this?
     args = get_args()
+    pp = pprint.PrettyPrinter(indent=2)
     if args.token:
         bearer_token = 'bearer ' + args.token
         token_url = testurl_submit + '/api/usertoken/' + args.token
@@ -85,8 +87,9 @@ def main():
             x['name'] = 'assay_input_library'
     versionNo = request(versionurl)
     if versionNo["current"] not in args.excel:
-        logging.error("the excel version does not match the current metadata database version %s. Please download the latest excel template." % versionNo["current"])
-        sys.exit(1)
+        logging.error("the excel version does not match the current metadata database version %s. Please use the latest template, or modify your file to match changes we made.\nVersion change history:" % versionNo["current"])
+        pp.pprint(versionNo)
+        # sys.exit(1)
     relationship_connectto = {}  # relationship_name: table_name for connection fields.  {'Bioproject': {'works_on': 'lab'},...}
     ColumnnameToRelationship = {}  # display_column_name: relationship_name for connection fields.  {'Bioproject': {'Lab': 'works_on'},...}
     SheetToTable = {}  # excel file work sheet name to database table name correlation. {Assay:assays,...}
@@ -663,7 +666,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
 
 def getfields():
     allfieldnames = {}
-    for table in ("assay", "bioproject", "biosample", "challenge", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
+    for table in ("assay", "bioproject", "biosample", "challenge", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment", "mergedFile"):
         filename = 'fields/' + table + '.js'
         string = '[{'
         with open(filename, mode='r', encoding='utf-8') as f:
@@ -687,7 +690,7 @@ def getfields():
 
 def urlfields(kind, url):
     allfieldnames = {}
-    for table in ("assay", "bioproject", "biosample", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment"):
+    for table in ("assay", "bioproject", "biosample", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment", "mergedFile"):
         if kind == 'schema':
             urljson = url + '/schema/' + table + '.json'
         elif kind == 'relationships':
