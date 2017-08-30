@@ -235,7 +235,8 @@ def request(url, parameter="", method="", bearer_token=""):
     except urllib.error.URLError as e:
         ResponseData = e.read().decode("utf8", 'ignore')
         ResponseDict = json.loads(ResponseData)
-        logging.error(ResponseDict["message"])
+        if "message" in ResponseDict:
+            logging.error(ResponseDict["message"])
         return ResponseDict
         # sys.exit(1)
     except timeout:
@@ -447,7 +448,6 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             if response['statusCode'] != 200:
                                 logging.error("%s update failed!" % Acsn)
-                                logging.error(response['message'])
                                 noerror = 1
                                 break
 
@@ -525,7 +525,6 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
                             response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             if response['statusCode'] != 200:
                                 logging.error("%s update failed!" % Acsn)
-                                logging.error(response['message'])
                                 noerror = 1
                                 break
 
