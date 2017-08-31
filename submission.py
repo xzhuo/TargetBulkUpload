@@ -42,6 +42,13 @@ def get_args():
         metadata successfully submitted to test database.\n',
     )
     parser.add_argument(
+        '--testlink',
+        '-l',
+        action="store_true",
+        dest="testlink",
+        help='test flag. if true, test DEV1 links connections\n',
+    )
+    parser.add_argument(
         '--tokenkey',
         '-k',
         action="store",
@@ -116,12 +123,12 @@ def main():
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest or args.mode:
         accession_check(args.notest, submission, url_meta, SheetToTable, args.mode, user_name)
-        upload(args.notest, submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
+        upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
         accession_check(args.notest, submission, testurl_meta, SheetToTable, args.mode, user_name)
         logging.debug(json.dumps(submission, indent=4, sort_keys=True))
-        upload(args.notest, submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
+        upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
             now you can upload the same file to real database with the '--notest' flag if you are using command line, \
             if you are using our website uploading excel then click the submit button.")
@@ -187,9 +194,15 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                                 d[column_name] = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
                             else:
                                 d[column_name] = str(value).rstrip()  # use string for now. May use number later.
-                        elif data_type == "date" and ctype == 3:
-                            # ipdb.set_trace()
-                            d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
+                        elif data_type == "date":
+                            if value == 'NA':
+                                d[column_name] = '1970-01-01'
+                            elif ctype == 3:
+                                # ipdb.set_trace()
+                                d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
+                            else:
+                                d[column_name] = value
+
                         elif data_type == "number" and value == 'NA':  # assign number field to -1 if it is NA in the excel.
                             d[column_name] = -1
                             logging.info("Change NA to -1 for %s in %s." % (column_name, Sheet))
@@ -413,7 +426,7 @@ def replace_accession(metadata, user_accession, new_accession=""):
     return new_accession
 
 
-def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
+def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
     AcsnDict = {}
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
@@ -608,7 +621,7 @@ def upload(notest, metadata, relationship_connectto, SheetToTable, url, url_subm
     # ipdb.set_trace()
     if noerror:
         sys.exit("something wrong processing the excel file, quitting...")
-    elif notest or mode:
+    elif notest or mode or testlink:
         logging.info("all the records uploaded/updated, it is time to connect all the relationships!\n")
         for Sheet in orderList:
             if Sheet in linkDict:
