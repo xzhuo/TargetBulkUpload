@@ -91,7 +91,6 @@ def get_args():
 def main():
     logging.getLogger().setLevel(logging.INFO)  # Do I need a flag to change this?
     args = get_args()
-    pp = pprint.PrettyPrinter(indent=2)
     if args.token:
         bearer_token = 'bearer ' + args.token
         token_url = testurl_submit + '/api/usertoken/' + args.token
@@ -108,9 +107,10 @@ def main():
         if x['display_name'] == "Library":
             x['name'] = 'assay_input_library'
     versionNo = request(versionurl)
-    if versionNo["current"] not in args.excel:
-        logging.error("the excel version does not match the current metadata database version %s. Please use the latest template, or modify your file to match changes we made.\nVersion change history:" % versionNo["current"])
-        pp.pprint(versionNo)
+    # if versionNo["current"] not in args.excel:
+    #     logging.error("the excel version does not match the current metadata database version %s. Please use the latest template, or modify your file to match changes we made.\nVersion change history:" % versionNo["current"])
+    #     pp = pprint.PrettyPrinter(indent=2)
+    #     pp.pprint(versionNo)
         # sys.exit(1)
     relationship_connectto = {}  # relationship_name: table_name for connection fields.  {'Bioproject': {'works_on': 'lab'},...}
     ColumnnameToRelationship = {}  # display_column_name: relationship_name for connection fields.  {'Bioproject': {'Lab': 'works_on'},...}
@@ -133,7 +133,7 @@ def main():
         else:
             ColumnnameToAllfields[Table] = {x['text']: x['name'] for x in schema_json[Table] if 'text' in x}
 
-    submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode)
+    submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode, versionNo)
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest or args.mode:
@@ -155,7 +155,7 @@ def main():
             if you are using our website uploading excel then click the submit button.")
 
 
-def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
+def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionNo):
     wb = xlrd.open_workbook(file)
     sheet_names = wb.sheet_names()
     all_sheets = OrderedDict()
@@ -165,6 +165,16 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
         sheet = wb.sheet_by_name(Sheet)
         columns = [str(sheet.cell(1, col_index).value).rstrip() for col_index in range(sheet.ncols)]  # start from row number 1 to skip header
         dict_list = []
+        column_name_type_dict = {x['text']: {"column_name": x['name'], "data_type": x["type"]} for x in schema_json[Sheet] if 'text' in x}
+        all_database_fields = list(column_name_type_dict.keys()) + list(ColumnnameToRelationship[Sheet].keys())
+        for database_field in all_database_fields:
+            if database_field not in columns:
+                # logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+                print("version change history:")
+                pp = pprint.PrettyPrinter(indent=2)
+                pp.pprint(versionNo)
+                sys.exit("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+        accession_rule = [x['placeholder'] for x in schema_json[Sheet] if x['text'] == "User accession"][0][:-4]
         for row_index in range(2, sheet.nrows):
             # d = {columns[col_index]: str(sheet.cell(row_index, col_index).value.rstrip()) for col_index in range(sheet.ncols)}  # use string first
             d = OrderedDict()
@@ -175,17 +185,22 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode):
                 if Column_name == "System Accession":
                     column_name = "sysaccession"
                     data_type = "text"
-                if Column_name == "User Accession":
+                elif Column_name == "User Accession":
                     Column_name = "User accession"
                     data_type = "text"
-                for fielddict in schema_json[Sheet]:
-                    if fielddict["text"] == Column_name:
-                        column_name = fielddict["name"]
-                        data_type = fielddict["type"]
-                    if fielddict["text"] == "User accession":
-                        accession_rule = fielddict["placeholder"][:-4]
+                elif Column_name in column_name_type_dict:
+                    column_name = column_name_type_dict[Column_name]["column_name"]
+                    data_type = column_name_type_dict[Column_name]["data_type"]
+                # for fielddict in schema_json[Sheet]:
+                #     if fielddict["text"] == Column_name:
+                #         column_name = fielddict["name"]
+                #         data_type = fielddict["type"]
+                #     if fielddict["text"] == "User accession":
+                #         accession_rule = fielddict["placeholder"][:-4]
+
                 # column_name = Column_name[:1].lower() + Column_name[1:]  # first character lowercase
-                if column_name == "NA" and Sheet in ColumnnameToRelationship and Column_name in ColumnnameToRelationship[Sheet]:
+                elif Column_name in ColumnnameToRelationship[Sheet]:
+                # if column_name == "NA" and Sheet in ColumnnameToRelationship and Column_name in ColumnnameToRelationship[Sheet]:
                     column_name = ColumnnameToRelationship[Sheet][Column_name]
                     data_type = "text"
 
