@@ -19,6 +19,21 @@ versionurl = 'http://meta.target.wustl.edu/api/version'
 # hard code version for now, will get it from a url latter:
 # versionNo = {"version": "2.0"}
 
+total_tabs = {"assay": "Assay",
+              "bioproject": "Bioproject",
+              "biosample": "Biosample",
+              "diet": "Diet",
+              "experiment": "Experiment",
+              "file": "File",
+              "lab": "Lab",
+              "library": "Library",
+              "litter": "Litter",
+              "mouse": "Mouse",
+              "reagent": "Reagent",
+              "treatment": "Treatment",
+              "mergedFile": "Mergedfile"
+              }
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -122,13 +137,19 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest or args.mode:
-        accession_check(args.notest, submission, url_meta, SheetToTable, args.mode, user_name)
-        upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, url_meta, url_submit, user_name, bearer_token, args.mode)
+        action_url_meta = url_meta
+        action_url_submit = url_submit
+    else:
+        action_url_meta = testurl_meta
+        action_url_submit = testurl_submit
+
+    # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
+    accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name)
+
+    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode)
+    if args.notest or args.mode:
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
-        accession_check(args.notest, submission, testurl_meta, SheetToTable, args.mode, user_name)
-        logging.debug(json.dumps(submission, indent=4, sort_keys=True))
-        upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, testurl_meta, testurl_submit, user_name, bearer_token, args.mode)
         print("If you did not find errors above, all the records were successfully uploaded to the testing database, \
             now you can upload the same file to real database with the '--notest' flag if you are using command line, \
             if you are using our website uploading excel then click the submit button.")
@@ -431,9 +452,10 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
     saved_submission_url = url_submit + "/api/submission"
-    orderList = ["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File", "Experiment", "Mergedfile"]
+    all_possible_Sheets = total_tabs.values()  # I need to use all possible sheets here because some links may point to other tabs not in the metadata
+    #["Lab", "Bioproject", "Diet", "Treatment", "Reagent", "Litter", "Mouse", "Biosample", "Library", "Assay", "File", "Experiment", "Mergedfile"]
     noerror = 0
-    for Sheet in orderList:
+    for Sheet in all_possible_Sheets:
         print("\nworking on: ")
         print(Sheet)
         if Sheet in metadata:
@@ -623,7 +645,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
         sys.exit("something wrong processing the excel file, quitting...")
     elif notest or mode or testlink:
         logging.info("all the records uploaded/updated, it is time to connect all the relationships!\n")
-        for Sheet in orderList:
+        for Sheet in all_possible_Sheets:
             if Sheet in linkDict:
                 fullurl = url + '/api/' + SheetToTable[Sheet]
                 for Acsn in linkDict[Sheet]:
@@ -633,7 +655,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                         if linkDict[Sheet][Acsn][connection_name] == 'NA':
                             continue
                         linkTo = relationship_connectto[Sheet][connection_name]
-                        LinkTo = linkTo[:1].upper() + linkTo[1:].lower()
+                        LinkTo = total_tabs[linkTo]
                         linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
                         if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
                             linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
@@ -675,38 +697,14 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
             logging.error("Fail to save submission!")
 
 
-def getfields():
-    allfieldnames = {}
-    for table in ("assay", "bioproject", "biosample", "challenge", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment", "mergedFile"):
-        filename = 'fields/' + table + '.js'
-        string = '[{'
-        with open(filename, mode='r', encoding='utf-8') as f:
-            for line in f:
-                line = line.rstrip()
-                line = line.lstrip()
-                if not (line.startswith('var') or line.endswith(';')):
-                    line = line.replace("'", "\"")
-                    index = line.find(":")
-                    if index > 0:
-                        if line.startswith("type"):
-                            line = '"type": "' + line[index + 2:-1] + '",'
-                        else:
-                            line = '"' + line[:index] + '"' + line[index:]
-                    string = string + line
-        string = string + '}]'
-        Table = table[:1].upper() + table[1:].lower()
-        allfieldnames[Table] = json.loads(string)
-    return allfieldnames
-
-
 def urlfields(kind, url):
     allfieldnames = {}
-    for table in ("assay", "bioproject", "biosample", "diet", "drug", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "replicate", "treatment", "mergedFile"):
+    for table, Table in total_tabs.items():
         if kind == 'schema':
             urljson = url + '/schema/' + table + '.json'
         elif kind == 'relationships':
             urljson = url + '/schema/relationships/' + table + '.json'
-        Table = table[:1].upper() + table[1:].lower()
+        # Table = table[:1].upper() + table[1:].lower()
         logging.debug(urljson)
         data = urllib.request.urlopen(urljson).read().decode('utf8')
         # str_data = data.readall().decode('utf-8')
