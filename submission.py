@@ -144,7 +144,7 @@ def main():
         action_url_submit = testurl_submit
 
     # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
-    accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name)
+    accession_check(args.testlink, submission, action_url_meta, SheetToTable, args.mode, user_name)
 
     upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode)
     if args.notest or args.mode:
@@ -299,7 +299,7 @@ def request(url, parameter="", method="", bearer_token=""):
         return ResponseDict
 
 
-def accession_check(notest, metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
+def accession_check(testlink, metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
     if not mode:  # user_accession exits always.
         for Sheet in metadata:
             table = SheetToTable[Sheet]
@@ -329,8 +329,9 @@ def accession_check(notest, metadata, url, SheetToTable, mode, user_name):  # if
                 elif user_accession not in accessionlist:
                     if user_accession not in existing_user_accession:
                         accessionlist.append(user_accession)
-                    elif not notest:  # if it is test in DEV1, also append it for post request.
+                    elif testlink:  # if it is test in DEV1, also append it for post request.
                         accessionlist.append(user_accession)
+                        replace_accession(metadata, user_accession)
                     else:
                         existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
                         logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
@@ -722,7 +723,8 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                             sys_connection_name = connection_name
                         existing_linkTo = existing_connection[sys_connection_name][linkTo][0]
                         if linkTo_TRGTacc == existing_linkTo:  # if there is only one connection!
-                            logging.info("%s relationship linked to %s remains the same!" % (Acsn, linkTo_TRGTacc))
+                            if existing_linkTo != "":
+                                logging.info("%s relationship linked to %s remains the same!" % (Acsn, linkTo_TRGTacc))
                             continue
                         else:
                             if existing_linkTo != "":  # delete connection.
