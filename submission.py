@@ -724,22 +724,31 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                         existing_linkTo = existing_connection[sys_connection_name][linkTo][0]
                         if linkTo_TRGTacc == existing_linkTo:  # if there is only one connection!
                             if existing_linkTo != "":
-                                logging.info("%s relationship linked to %s remains the same!" % (Acsn, linkTo_TRGTacc))
+                                logging.info("%s's connection to %s remains!" % (Acsn, linkTo_TRGTacc))
                             continue
                         else:
                             if existing_linkTo != "":  # delete connection.
                                 removeurl = fullurl + '/' + Acsn + '/' + linkTo + '/remove'
                                 RemoveBody = {"connectionAcsn": existing_linkTo, "connectionName": sys_connection_name}
                                 responsestatus = request(removeurl, json.dumps(RemoveBody), 'POST', bearer_token)
-                            linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": sys_connection_name}
-                            responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
-                            if responsestatus["statusCode"] == 200:
-                                logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
-                            elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
-                                logging.error("%s relationships is not linked, seems like an error! Please correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
-                                noerror = 1
-                            else:
-                                logging.warning("%s relationships is not linked. Make sure it does not matter. Or you can correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
+                                if responsestatus["statusCode"] == 200:
+                                    logging.info("%s relationship to %s has been successfully deleted!" % (Acsn, existing_linkTo))
+                                else:
+                                    if "message" in responsestatus:
+                                        logging.error(responsestatus["message"])
+                                    else:
+                                        logging.error("%s's connection to %s failed to be deleted!" % (Acsn, existing_linkTo))
+                                    noerror = 1
+                            if linkTo_TRGTacc != "":
+                                linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": sys_connection_name}
+                                responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
+                                if responsestatus["statusCode"] == 200:
+                                    logging.info("%s has been successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
+                                elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
+                                    logging.error("%s relationships is not linked, seems like an error! Please correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
+                                    noerror = 1
+                                else:
+                                    logging.warning("%s relationships is not linked. Make sure it does not matter. Or you can correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
         if noerror:
             sys.exit("something wrong establishing relationships in the excel file, quitting...")
     else:
