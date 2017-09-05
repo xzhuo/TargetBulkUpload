@@ -136,7 +136,7 @@ def main():
     submission = multi_excel2JSON(args.excel, schema_json, ColumnnameToRelationship, args.mode, versionNo)
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
-    if args.notest or args.mode:
+    if args.notest:
         action_url_meta = url_meta
         action_url_submit = url_submit
     else:
@@ -222,7 +222,8 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                         else:
                             value = "FALSE"
                         # value = "TRUE"  # not enough, there are other restricted columns
-                    if value != '' or column_name == "sysaccession":
+                    # if value != '' or column_name == "sysaccession":
+                    if 1:  # temporary indent holder
                         if data_type == "textnumber":
                             d[column_name] = value
                         elif data_type == "text":
@@ -289,8 +290,8 @@ def request(url, parameter="", method="", bearer_token=""):
         return ResponseDict
         # sys.exit(1)
     except timeout:
-        logging.error("Fail to create or update the following record to databse link %s. Please make sure the url used here is correct.\n%s" % (url, parameter))
-        return ResponseDict
+        sys.exit("Fail to create or update the following record to databse link %s. Please make sure the url used here is correct.\n%s" % (url, parameter))
+        # return ResponseDict
         # sys.exit(1)
 
     else:
@@ -664,16 +665,46 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
             if Sheet in linkDict:
                 fullurl = url + '/api/' + SheetToTable[Sheet]
                 for Acsn in linkDict[Sheet]:
+                    existing_url = fullurl + '/' + Acsn
+                    existing_record = request(existing_url)
+                    existing_connection = existing_record["mainObj"]["added"]
+                    # "added": {
+                    #     "recruits": {
+                    #         "reagent": [
+                    #             ""
+                    #         ]
+                    #     },
+                    #     "assay_input": {
+                    #         "biosample": [
+                    #             "TRGTSMP00021230"
+                    #         ],
+                    #         "library": [
+                    #             "TRGTLIB000243"
+                    #         ]
+                    #     },
+                    #     "control": {
+                    #         "assay": [
+                    #             ""
+                    #         ]
+                    #     },
+                    #     "technical_replicate": {
+                    #         "assay": [
+                    #             ""
+                    #         ]
+                    #     }
+                    # },
                     for connection_name in linkDict[Sheet][Acsn]:  # connection_name like "dam", "sire" or "challenge Diet"
                         # regex connection_name here. if true, use it directly, otherwise use relationship_connectto[Sheet][connection_name]:  I don't understand the comment now.
                         # linkTo = AcsnDict[Sheet][relationship_connectto[Sheet][connection_name]]
-                        if linkDict[Sheet][Acsn][connection_name] == 'NA':
-                            continue
+                        # if linkDict[Sheet][Acsn][connection_name] == 'NA':
+                        #     continue
                         linkTo = relationship_connectto[Sheet][connection_name]
                         LinkTo = total_tabs[linkTo]
                         linkurl = fullurl + '/' + Acsn + '/' + linkTo + '/add'
                         if linkDict[Sheet][Acsn][connection_name].startswith("TRGT"):
                             linkTo_TRGTacc = linkDict[Sheet][Acsn][connection_name]
+                        elif linkDict[Sheet][Acsn][connection_name] == "" or linkDict[Sheet][Acsn][connection_name] == "NA":
+                            linkTo_TRGTacc = ""
                         else:  # no longer need user accession start with USR
                         # elif linkDict[Sheet][Acsn][connection_name].startswith("USR"):  # temporary for ENCODE data
                             if linkDict[Sheet][Acsn][connection_name] not in AcsnDict[LinkTo]:
@@ -685,20 +716,28 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                         # else:  # temporary for ENCODE data 3 lines.
                         #     logging.warning("%s is not a valid accession. %s %s relationship %s is not established." %
                         #                     (linkDict[Sheet][Acsn][connection_name], Sheet, Acsn, connection_name))
-
                         if connection_name == "assay_input_biosample" or connection_name == "assay_input_library":
-                            # linkBody = {SheetToTable[linkTo]['Acsn']: linkDict[Sheet][Acsn][connection_name], "connectionName": "assay_input"}
-                            linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": "assay_input"}
+                            sys_connection_name = "assay_input"
                         else:
-                            linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": connection_name}
-                        responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
-                        if responsestatus["statusCode"] == 200:
-                            logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
-                        elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
-                            logging.error("%s relationships is not linked, seems like an error! Please correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
-                            noerror = 1
+                            sys_connection_name = connection_name
+                        existing_linkTo = existing_connection[sys_connection_name][linkTo][0]
+                        if linkTo_TRGTacc == existing_linkTo:  # if there is only one connection!
+                            logging.info("%s relationship linked to %s remains the same!" % (Acsn, linkTo_TRGTacc))
+                            continue
                         else:
-                            logging.warning("%s relationships is not linked. Make sure it does not matter. Or you can correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
+                            if existing_linkTo != "":  # delete connection.
+                                removeurl = fullurl + '/' + Acsn + '/' + linkTo + '/remove'
+                                RemoveBody = {"connectionAcsn": existing_linkTo, "connectionName": sys_connection_name}
+                                responsestatus = request(removeurl, json.dumps(RemoveBody), 'POST', bearer_token)
+                            linkBody = {"connectionAcsn": linkTo_TRGTacc, "connectionName": sys_connection_name}
+                            responsestatus = request(linkurl, json.dumps(linkBody), 'POST', bearer_token)
+                            if responsestatus["statusCode"] == 200:
+                                logging.info("%s relationships successfully linked to %s!" % (Acsn, linkTo_TRGTacc))
+                            elif(linkDict[Sheet][Acsn][connection_name].startswith("TRGT") or linkDict[Sheet][Acsn][connection_name].startswith("USR")):
+                                logging.error("%s relationships is not linked, seems like an error! Please correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
+                                noerror = 1
+                            else:
+                                logging.warning("%s relationships is not linked. Make sure it does not matter. Or you can correct your relationships in your excel file, and update the database with correct connections." % (Acsn))
         if noerror:
             sys.exit("something wrong establishing relationships in the excel file, quitting...")
     else:
