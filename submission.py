@@ -334,7 +334,7 @@ def accession_check(testlink, metadata, url, SheetToTable, mode, user_name):  # 
                         replace_accession(metadata, user_accession)
                     else:
                         existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
-                        logging.warning("Found %s user accession %s in our database with system accession %s" % (Sheet, user_accession, " ".join(existing_sys_acc)))
+                        logging.warning("Found %s user accession %s in our database with system accession %s, the record in excel file will not be submitted." % (Sheet, user_accession, " ".join(existing_sys_acc)))
                         if len(existing_sys_acc) == 1:
                             if "sysaccession" in metadata[Sheet][i] and len(metadata[Sheet][i]["sysaccession"]) > 0 and metadata[Sheet][i]["sysaccession"] != existing_sys_acc[0]:
                                 logging.error("the system accession %s in the excel file does not match the system accession %s in our database!" % (metadata[Sheet][i]["sysaccession"], existing_sys_acc[0]))
