@@ -173,7 +173,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                 print("version change history:")
                 pp = pprint.PrettyPrinter(indent=2)
                 pp.pprint(versionNo)
-                sys.exit("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+                logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
         accession_rule = [x['placeholder'] for x in schema_json[Sheet] if x['text'] == "User accession"][0][:-4]
         for row_index in range(2, sheet.nrows):
             # d = {columns[col_index]: str(sheet.cell(row_index, col_index).value.rstrip()) for col_index in range(sheet.ncols)}  # use string first
@@ -208,7 +208,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                     data_type = "text"
                 # data_type = "text"  # wait until the correct type set!! Temporary line here
                 if column_name == "NA":
-                    logging.warning("field name %s from %s in excel is not in the database! Please download the latest excel template." % (Column_name, Sheet))
+                    logging.warning("field name %s from %s in excel is not in the database! The column will be skipped and please download the latest excel template." % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
                     ctype = sheet.cell(row_index, col_index).ctype
