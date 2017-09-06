@@ -143,10 +143,12 @@ def main():
         action_url_meta = testurl_meta
         action_url_submit = testurl_submit
 
+    # a dict to track accession names.
+    acc_name = {}
     # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
-    accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name)
+    accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name, acc_name)
 
-    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode)
+    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
     if args.notest or args.mode:
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
@@ -299,7 +301,7 @@ def request(url, parameter="", method="", bearer_token=""):
         return ResponseDict
 
 
-def accession_check(notest, metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
+def accession_check(notest, metadata, url, SheetToTable, mode, user_name, acc_name):  # if there is duplicated user accession number.
     if not mode:  # user_accession exits always.
         for Sheet in metadata:
             table = SheetToTable[Sheet]
@@ -331,7 +333,8 @@ def accession_check(notest, metadata, url, SheetToTable, mode, user_name):  # if
                         accessionlist.append(user_accession)
                     elif not notest:  # if it is test in DEV1, also append it for post request.
                         accessionlist.append(user_accession)
-                        replace_accession(metadata, user_accession)
+                        newname = replace_accession(metadata, user_accession)
+                        acc_name[newname] = user_accession
                     else:
                         existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
                         logging.warning("Found %s user accession %s in our database with system accession %s, the record in excel file will not be submitted." % (Sheet, user_accession, " ".join(existing_sys_acc)))
@@ -465,7 +468,7 @@ def replace_accession(metadata, user_accession, new_accession=""):
     return new_accession
 
 
-def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
+def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode, acc_name):
     AcsnDict = {}
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
@@ -557,7 +560,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                                 if notest:
                                     logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
                                 else:
-                                    logging.info("Record %s has been successfully validated!" % tempAcsn)
+                                    logging.info("Record %s has been successfully validated!" % acc_name[tempAcsn])
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[Sheet] = {}
@@ -655,7 +658,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                                 if notest:
                                     logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
                                 else:
-                                    logging.info("Record %s has been successfully validated." % (tempAcsn))
+                                    logging.info("Record %s has been successfully validated." % (acc_name[tempAcsn]))
 
 
     # ipdb.set_trace()
