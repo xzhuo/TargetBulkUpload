@@ -329,12 +329,12 @@ def accession_check(notest, metadata, url, SheetToTable, mode, user_name, acc_na
                     logging.error("please provide user accession for all rows in %s" % Sheet)
                     sys.exit(1)
                 elif user_accession not in accessionlist:
-                    if user_accession not in existing_user_accession:
-                        accessionlist.append(user_accession)
-                    elif not notest:  # if it is test in DEV1, also append it for post request.
+                    if not notest:  # if it is test in DEV1, also append it for post request.
                         accessionlist.append(user_accession)
                         newname = replace_accession(metadata, user_accession)
                         acc_name[newname] = user_accession
+                    elif user_accession not in existing_user_accession:
+                        accessionlist.append(user_accession)
                     else:
                         existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
                         logging.warning("Found %s user accession %s in our database with system accession %s, the record in excel file will not be submitted." % (Sheet, user_accession, " ".join(existing_sys_acc)))
