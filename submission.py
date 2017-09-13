@@ -147,7 +147,7 @@ def main():
     acc_name = {}
     # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
     accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name, acc_name)
-
+    logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
     if args.notest or args.mode:
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
@@ -503,7 +503,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                             updateurl = fullurl + '/' + Acsn
                             response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             if response['statusCode'] != 200:
-                                logging.error("%s update failed!" % Acsn)
+                                logging.error("%s update failed in line 506!" % Acsn)
                                 noerror = 1
                                 break
 
@@ -546,7 +546,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
 
                             response = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                             if "accession" not in response:
-                                logging.error("POST request failed!")
+                                logging.error("POST request failed in line 549!")
                                 noerror = 1
                                 break
                             else:
@@ -580,7 +580,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                             updateurl = fullurl + '/' + Acsn
                             response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             if response['statusCode'] != 200:
-                                logging.error("%s update failed!" % Acsn)
+                                logging.error("%s update failed in line 583!" % Acsn)
                                 noerror = 1
                                 break
 
@@ -643,7 +643,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                                     tempDict[key] = entry.pop(key)
                             response = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                             if "accession" not in response:
-                                logging.error("POST request failed!")
+                                logging.error("POST request failed in line 646!")
                                 noerror = 1
                                 break
                             else:
