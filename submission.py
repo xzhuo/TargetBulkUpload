@@ -143,10 +143,12 @@ def main():
         action_url_meta = testurl_meta
         action_url_submit = testurl_submit
 
+    # a dict to track accession names.
+    acc_name = {}
     # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
-    accession_check(args.testlink, submission, action_url_meta, SheetToTable, args.mode, user_name)
-
-    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode)
+    accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name, acc_name)
+    logging.debug(json.dumps(submission, indent=4, sort_keys=True))
+    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
     if args.notest or args.mode:
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
@@ -173,7 +175,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                 print("version change history:")
                 pp = pprint.PrettyPrinter(indent=2)
                 pp.pprint(versionNo)
-                sys.exit("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+                logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
         accession_rule = [x['placeholder'] for x in schema_json[Sheet] if x['text'] == "User accession"][0][:-4]
         for row_index in range(2, sheet.nrows):
             # d = {columns[col_index]: str(sheet.cell(row_index, col_index).value.rstrip()) for col_index in range(sheet.ncols)}  # use string first
@@ -208,7 +210,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                     data_type = "text"
                 # data_type = "text"  # wait until the correct type set!! Temporary line here
                 if column_name == "NA":
-                    logging.warning("field name %s from %s in excel is not in the database! Please download the latest excel template." % (Column_name, Sheet))
+                    logging.warning("field name %s from %s in excel is not in the database! The column will be skipped and please download the latest excel template." % (Column_name, Sheet))
                 else:
                     value = sheet.cell(row_index, col_index).value
                     ctype = sheet.cell(row_index, col_index).ctype
@@ -299,7 +301,7 @@ def request(url, parameter="", method="", bearer_token=""):
         return ResponseDict
 
 
-def accession_check(testlink, metadata, url, SheetToTable, mode, user_name):  # if there is duplicated user accession number.
+def accession_check(notest, metadata, url, SheetToTable, mode, user_name, acc_name):  # if there is duplicated user accession number.
     if not mode:  # user_accession exits always.
         for Sheet in metadata:
             table = SheetToTable[Sheet]
@@ -327,11 +329,12 @@ def accession_check(testlink, metadata, url, SheetToTable, mode, user_name):  # 
                     logging.error("please provide user accession for all rows in %s" % Sheet)
                     sys.exit(1)
                 elif user_accession not in accessionlist:
-                    if user_accession not in existing_user_accession:
+                    if not notest:  # if it is test in DEV1, also append it for post request.
                         accessionlist.append(user_accession)
-                    elif testlink:  # if it is test in DEV1, also append it for post request.
+                        newname = replace_accession(metadata, user_accession)
+                        acc_name[newname] = user_accession
+                    elif user_accession not in existing_user_accession:
                         accessionlist.append(user_accession)
-                        replace_accession(metadata, user_accession)
                     else:
                         existing_sys_acc = [x['accession'] for x in existing[table] if (x['user'] == user_name and x['user_accession'] == user_accession)]
                         logging.warning("Found %s user accession %s in our database with system accession %s, the record in excel file will not be submitted." % (Sheet, user_accession, " ".join(existing_sys_acc)))
@@ -345,6 +348,7 @@ def accession_check(testlink, metadata, url, SheetToTable, mode, user_name):  # 
                         else:
                             logging.error("redundant user accession exists in the database, please contact dcc to fix the issue!")
                             sys.exit(1)
+
                         # delete_i.append(i)
 
                         # if replace == 1:
@@ -464,7 +468,7 @@ def replace_accession(metadata, user_accession, new_accession=""):
     return new_accession
 
 
-def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode):
+def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url, url_submit, user_name, bearer_token, mode, acc_name):
     AcsnDict = {}
     linkDict = {}
     submission_log = dict()  # a log of all system accession successfully uploaded or updated. It will be saved in api submission.
@@ -499,7 +503,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                             updateurl = fullurl + '/' + Acsn
                             response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             if response['statusCode'] != 200:
-                                logging.error("%s update failed!" % Acsn)
+                                logging.error("%s update failed in line 506!" % Acsn)
                                 noerror = 1
                                 break
 
@@ -542,7 +546,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
 
                             response = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                             if "accession" not in response:
-                                logging.error("POST request failed!")
+                                logging.error("POST request failed in line 549!")
                                 noerror = 1
                                 break
                             else:
@@ -556,7 +560,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                                 if notest:
                                     logging.info("Record %s has been successfully uploaded to database with a system accession %s" % (tempAcsn, Acsn))
                                 else:
-                                    logging.info("Record %s has been successfully validated!" % tempAcsn)
+                                    logging.info("Record %s has been successfully validated!" % acc_name[tempAcsn])
 
             else:  # if connections need to be established: delete linkage in the dict, post request, and remember which connections need to add later.
                 linkDict[Sheet] = {}
@@ -576,7 +580,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                             updateurl = fullurl + '/' + Acsn
                             response = request(updateurl, json.dumps(entry), 'POST', bearer_token)
                             if response['statusCode'] != 200:
-                                logging.error("%s update failed!" % Acsn)
+                                logging.error("%s update failed in line 583!" % Acsn)
                                 noerror = 1
                                 break
 
@@ -639,7 +643,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                                     tempDict[key] = entry.pop(key)
                             response = request(fullurl, json.dumps(entry), 'POST', bearer_token)
                             if "accession" not in response:
-                                logging.error("POST request failed!")
+                                logging.error("POST request failed in line 646!")
                                 noerror = 1
                                 break
                             else:
@@ -654,7 +658,7 @@ def upload(testlink, notest, metadata, relationship_connectto, SheetToTable, url
                                 if notest:
                                     logging.info("Record %s has been successfully uploaded to database with a system accession %s. Relationship will be established in the next step." % (tempAcsn, Acsn))
                                 else:
-                                    logging.info("Record %s has been successfully validated." % (tempAcsn))
+                                    logging.info("Record %s has been successfully validated." % (acc_name[tempAcsn]))
 
 
     # ipdb.set_trace()
