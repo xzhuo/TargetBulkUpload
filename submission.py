@@ -231,6 +231,7 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                         elif data_type == "text":
                             if ctype == 2:
                                 d[column_name] = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+                                # d[column_name] = str(round(value))
                             else:
                                 d[column_name] = str(value).rstrip()  # use string for now. May use number later.
                         elif data_type == "date":
@@ -241,6 +242,11 @@ def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionN
                                 d[column_name] = xlrd.xldate.xldate_as_datetime(value, wb.datemode).date().isoformat()
                             else:
                                 d[column_name] = value
+                        elif data_type == "float":
+                            if ctype == 2:
+                                d[column_name] = round(value, 2)
+                            else:
+                                sys.exit("please use number for %s in %s" % (Column_name, Sheet))
 
                         elif data_type == "number" and value == 'NA':  # assign number field to -1 if it is NA in the excel.
                             d[column_name] = -1
