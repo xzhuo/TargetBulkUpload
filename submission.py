@@ -6,19 +6,37 @@ import urllib.error
 import json
 import argparse
 import logging
-import datetime
 import uuid  # used to generate unique user accesion if it is not provided.
 import pprint
 from socket import timeout
 
-url_meta = 'http://target.wustl.edu:7006'
-url_submit = 'http://target.wustl.edu:7002'
-testurl_meta = 'http://target.wustl.edu:8006'
-testurl_submit = 'http://target.wustl.edu:8002'
-versionurl = 'http://meta.target.wustl.edu/api/version'
-# hard code version for now, will get it from a url latter:
-# versionNo = {"version": "2.0"}
+URL_META = 'http://target.wustl.edu:7006'
+URL_SUBMIT = 'http://target.wustl.edu:7002'
+TESTURL_META = 'http://target.wustl.edu:8006'
+TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
+VERSIONURL = URL_META + '/api/version'
 
+uploader_to_use = Uploader()
+
+
+def change_uploader(new_uploader):
+    uploader_to_use = new_uploader
+
+
+######
+
+import submission.py as submission
+
+class FakeUploader():
+    pass
+
+
+fake = FakeUploader()
+submission.change_uploader(fake)
+submission.main()
+assert(fake.the_json_that_I_didnt_send).equals({})
+
+#####
 total_tabs = {"assay": "Assay",
               "bioproject": "Bioproject",
               "biosample": "Biosample",
@@ -33,6 +51,47 @@ total_tabs = {"assay": "Assay",
               "treatment": "Treatment",
               "mergedFile": "Mergedfile"
               }
+
+
+class SheetReader:
+    def __init__(self, schema_source):
+        self.schema_source = schema_source
+
+    def read_sheet(self, sheet):
+        category_name = sheet.name
+        schema = self.schema_source.get_schema_for_category(category_name)
+        # Validate with schema if desired
+        # Return something Uploader can understand.  It can be a simple dict, or if it gets complicated enough, make a
+        # new Metadata class and return an instance of that.
+        return {}
+
+
+class SchemaSource:
+    def __init__(self, url):
+        self.url = url
+
+    def get_schema_for_category(self, category_name):
+        pass
+
+    def get_relationships_for_category(self, category_name):
+        pass
+
+
+class Uploader:
+    def __init__(self, url):
+        self.url = url
+
+    def upload(self, data):
+        pass
+
+
+def upload_example():
+    schema_source = SchemaSource(SCHEMA_URL)
+    reader = SheetReader(schema_source)
+    uploader = Uploader(UPLOAD_URL)
+    for sheet in excel_doc:
+        sheet_data = reader.read_sheet(sheet)
+        uploader.upload(sheet_data)
 
 
 def get_args():
@@ -93,20 +152,20 @@ def main():
     args = get_args()
     if args.token:
         bearer_token = 'bearer ' + args.token
-        token_url = testurl_submit + '/api/usertoken/' + args.token
+        token_url = TESTURL_SUBMIT + '/api/usertoken/' + args.token
         # user_name_dict = request(token_url)
         user_name = request(token_url)["username"]
     else:
         logging.error("please provide a user API key!")
         sys.exit("please provide a user API key!")  # make token argument mandatory.
-    schema_json = urlfields('schema', testurl_meta)
-    relationship_json = urlfields('relationships', testurl_meta)
+    schema_json = urlfields('schema', TESTURL_META)
+    relationship_json = urlfields('relationships', TESTURL_META)
     for x in relationship_json["Assay"]["connections"]:
         if x['display_name'] == "Biosample":
             x['name'] = 'assay_input_biosample'
         if x['display_name'] == "Library":
             x['name'] = 'assay_input_library'
-    versionNo = request(versionurl)
+    versionNo = request(VERSIONURL)
     # if versionNo["current"] not in args.excel:
     #     logging.error("the excel version does not match the current metadata database version %s. Please use the latest template, or modify your file to match changes we made.\nVersion change history:" % versionNo["current"])
     #     pp = pprint.PrettyPrinter(indent=2)
@@ -137,18 +196,23 @@ def main():
 
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
     if args.notest:
-        action_url_meta = url_meta
-        action_url_submit = url_submit
+        action_url_meta = URL_META
+        action_url_submit = URL_SUBMIT
     else:
-        action_url_meta = testurl_meta
-        action_url_submit = testurl_submit
+        action_url_meta = TESTURL_META
+        action_url_submit = TESTURL_SUBMIT
 
     # a dict to track accession names.
     acc_name = {}
     # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
     accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name, acc_name)
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
-    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
+
+
+    ###############
+    uploader_to_use.upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
+
+    #upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
     if args.notest or args.mode:
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:
