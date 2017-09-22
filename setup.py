@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup (
     name='submitTaRGET',
-    version='1.1.0',
+    version='1.2.0',
     description='Bulk upload data to target dcc',
     url='https://github.com/xzhuo/TargetBulkUpload',
     author='Xiaoyu Zhuo',
