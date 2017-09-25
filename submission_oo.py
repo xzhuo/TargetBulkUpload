@@ -10,6 +10,7 @@ import logging
 import uuid  # used to generate unique user accesion if it is not provided.
 import pprint
 from socket import timeout
+import ipdb
 
 URL_META = 'http://target.wustl.edu:7006'
 URL_SUBMIT = 'http://target.wustl.edu:7002'
@@ -38,59 +39,88 @@ class StructureBuilder:
     def __init__(self, url, categories):
         self.url = url
         self.categories = categories  # it is a dictionary
-        self.schema = self.url_to_json('/schema/')
-        self.links = self.url_to_json('/schema/relationships/')
+        self.schema = self._url_to_json('/schema/')
+        self.links = self._url_to_json('/schema/relationships/')
 
         """
         There are two links in "Assay" named "assay_input", one points to biosample and the other points to library.
         I have to change them to "assay_input_biosample" and "assay_input_library" before useing them as key in my new dict.
+        
+        name example:
+        sheet: "File"
+        category: "file"
+        categories: "files"
         """
         for x in self.links["Assay"]["connections"]:
             if x['display_name'] == "Biosample":
                 x['name'] = 'assay_input_biosample'
             if x['display_name'] == "Library":
                 x['name'] = 'assay_input_library'
-
-        self.category_to_categories = self.build_dict("category_to_categories")
         self.linkto = self.build_dict("linkto")
         self.contain_links
         self.build_linkto
         self.build_contain_links
 
-    def build_dict(self, type):
+    def _url_to_json(self, string):
         new_dict = {}
-        if type == "category_to_categories":
-            for db_json, sheet in self.categories.items():
-                new_dict[sheet] = self.schema[db_json]["all"]
-        if type == "linkto":
-            pass
+        for db_category, sheet in self.categories.items():
+            json_url = self.url + string + db_category + '.json'
+            data = requests.get(json_url).json()["data"]  # data is a list for schema, but data is a dict for links. within links: data['connections'] is a list.
+            new_dict[sheet] = data
         return new_dict
 
-    def url_to_json(self, string):
-        schema = {}
-        for db_json, sheet in self.categories.items():
-            json_url = self.url + string + db_json + '.json'
-            data = requests.get(json_url).json()["data"]  # data is a list for schema, but data is a dict for links. within links: data['connections'] is a list.
-            schema[sheet] = data
-        return schema
-
     def get_categories(self, category):  # input is category name (file), return categories name (files)
-        pass
+        sheet = self.categories[category]
+        return self.links[sheet]["all"]
 
-    def get_linkto(self, link):  # input is relationship name, return linkto category.
-        pass
+    def get_linkto(self, sheet, link_field):  # from sheet name and link_filed name get which sheet it links to. For example: get_linkto("Bioproject", "work_on") returns "Lab"
+        get_list = [x["display_name"] for x in self.links[sheet]["connections"] if x["name"] == link_field]
+        return get_list[0]
 
-    def get_link(self, category):  # input is category name, return relationship name
+    def get_link_field(self, link_from, link_to):  # from which sheet link from and which sheet it links to and get the link_field. For example: get_link_field("Bioproject", "Lab") returns "work_on"
+        get_list = [x["name"] for x in self.links[link_from]["connections"] if x["display_name"] == link_to]
+        return get_list[0]
+
+    def get_all_fields(self, sheet):  # from sheet name get all fields from schema and linkto.
         pass
 
 
 class ExcelParser:
-    def __init__(self, meta_data_structure):
-        self.meta_data_structure = meta_data_structure
 
-    def read(self, sheet):
-        category_name = sheet.name
-        schema = self.schema_source.get_schema_for_category(category_name)
+    def __init__(self, metadata_structure, mode):
+        self.metadata_structure = metadata_structure
+        self.mode = mode  # TRUE if it is update, FALSE if it is submission.
+
+    def read(self, file):
+        wb = xlrd.open_workbook(file)
+        sheet_names = wb.sheet_names()
+        data_structure = self.metadata_structure
+        for sheet in sheet_names:
+            if sheet not in data_structure.schema.keys():  # skip "Instructions" and "Lists"
+                continue
+            sheet_obj = wb.sheet_by_name(sheet)
+            columns = [str(sheet_obj.cell(1, col_index).value).rstrip() for col_index in range(sheet_obj.ncols)]  # start from row number 1 to skip header
+            dict_list = []
+            all_database_fields = data_structure.get_all_fields(sheet)
+            {x['text']: {"column_name": x['name'], "data_type": x["type"]} for x in data_structure.schema[sheet] if "text" in x}
+
+
+
+            # following from original script:
+            dict_list = []
+            column_name_type_dict = {x['text']: {"column_name": x['name'], "data_type": x["type"]} for x in schema_json[Sheet] if 'text' in x}
+            all_database_fields = list(column_name_type_dict.keys()) + list(ColumnnameToRelationship[Sheet].keys())
+            for database_field in all_database_fields:
+                if database_field not in columns:
+                    # logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+                    print("version change history:")
+                    pp = pprint.PrettyPrinter(indent=2)
+                    pp.pprint(versionNo)
+                    logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+            accession_rule = [x['placeholder'] for x in schema_json[Sheet] if x['text'] == "User accession"][0][:-4]
+
+
+
         # Validate with schema if desired
         # Return something Uploader can understand.  It can be a simple dict, or if it gets complicated enough, make a
         # new Metadata class and return an instance of that.
@@ -200,9 +230,13 @@ def main():
         action_url_submit = TESTURL_SUBMIT
 
     meta_data_structure = StructureBuilder(action_url_meta, ALL_CATEGORIES)
+    ipdb.set_trace()
     reader = ExcelParser(meta_data_structure, args.mode)
     submission_dict = reader.read(args.excel)
     AccessionEnforcer.duplication_check(submission_dict)
     AccessionEnforcer.sys_acc_assign(submission_dict)
     Uploader.upload(submission_dict)
 
+
+if __name__ == '__main__':
+    main()
