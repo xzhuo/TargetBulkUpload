@@ -17,12 +17,14 @@ URL_SUBMIT = 'http://target.wustl.edu:7002'
 TESTURL_META = 'http://target.wustl.edu:8006'
 TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
 VERSIONURL = URL_META + '/api/version'
+NUMBER_ZEROS = 3
 
 # The ctype represents in xlrd package parsering excel file:
 CTYPE_NUMBER = 2
 CTYPE_DATE = 3
 CTYPE_BOOLEAN = 4
-
+EXCEL_HEADER_ROW = 1
+EXCEL_DATA_START_ROW = EXCEL_HEADER_ROW + 1
 # The database json name : excel worksheet name correlation:
 ALL_CATEGORIES = {"assay": "Assay",
                   "bioproject": "Bioproject",
@@ -40,12 +42,13 @@ ALL_CATEGORIES = {"assay": "Assay",
                   }
 
 
-class Db_structure:
+class DatabaseStructure:
     def __init__(self, url, categories):
         self.url = url
         self.categories = categories  # it is a dictionary
-        self.schema = self._url_to_json('/schema/')
-        self.links = self._url_to_json('/schema/relationships/')
+        self.schema_dict = self._url_to_json('/schema/')
+        self.link_dict = self._url_to_json('/schema/relationships/')
+        self.version = self.get_version('/api/version')
 
         """
         There are two links in "Assay" named "assay_input", one points to biosample and the other points to library.
@@ -56,15 +59,18 @@ class Db_structure:
         category: "file"
         categories: "files"
         """
-        for x in self.links["Assay"]["connections"]:
-            if x['display_name'] == "Biosample":
-                x['name'] = 'assay_input_biosample'
-            if x['display_name'] == "Library":
-                x['name'] = 'assay_input_library'
-        self.linkto = self.build_dict("linkto")
-        self.contain_links
-        self.build_linkto
-        self.build_contain_links
+
+
+
+        # for x in self.link_dict["Assay"]["connections"]:
+        #     if x['display_name'] == "Biosample":
+        #         x['name'] = 'assay_input_biosample'
+        #     if x['display_name'] == "Library":
+        #         x['name'] = 'assay_input_library'
+        # self.linkto = self.build_dict("linkto")
+        # self.contain_links
+        # self.build_linkto
+        # self.build_contain_links
 
     def _url_to_json(self, string):
         new_dict = {}
@@ -74,123 +80,154 @@ class Db_structure:
             new_dict[sheet] = data
         return new_dict
 
-    def get_categories(self, category):  # input is category name (file), return categories name (files)
-        sheet = self.categories[category]
-        return self.links[sheet]["all"]
-
-    def get_linkto(self, sheet, link_field):  # from sheet name and link_filed name get which sheet it links to. For example: get_linkto("Bioproject", "work_on") returns "Lab"
-        get_list = [x["display_name"] for x in self.links[sheet]["connections"] if x["name"] == link_field]
-        return get_list[0]
-
-    def get_link_field(self, link_from, link_to):  # from which sheet link from and which sheet it links to and get the link_field. For example: get_link_field("Bioproject", "Lab") returns "work_on"
-        get_list = [x["name"] for x in self.links[link_from]["connections"] if x["display_name"] == link_to]
-        return get_list[0]
-
-    def get_all_fields(self, sheet):  # from sheet name get all fields from schema and linkto.
-        pass
-
-    def get_accession_rule(self, sheet):
-        pass
-
-    def get_column_name(self, sheet, column_displayname):
-        pass
-
-    def get_data_type(self, sheet, column_displayname):
-        pass
+    def get_version(self, version_string):
+        full_url = self.url + version_string
+        return requests.get(full_url).json()
 
 
-class ExcelParser:
+class SheetStructure:
+    def __init__(self, structure_obj, sheet):
+        self.name = sheet
+        schema = structure_obj.schema_dict[sheet]  # schema is a list
+        link = structure_obj.link_dict[sheet]  # link is a dictionary, link["connections"] is a list.
+        self.schema = schema
+        self.link = link
+        self.categories = link["all"]
+        self.category = link["one"]
+        # self.user_accession_rule = link["usr_prefix"][:-NUMBER_ZEROS]
+        self.user_accession_rule = [x["placeholder"] for x in schema if x["text"] == "User accession"][0][:-4]
+        self.system_accession_rule = link["prefix"][:-NUMBER_ZEROS]
+        self.schema_columns = [x["text"] for x in schema]
+        self.link_columns = [x["display_name"] for x in link["connections"]]
+        self.all_columns = self.schema_columns + self.link_columns
+        self.version = structure_obj.version
 
-    def __init__(self, metadata_structure, mode):
-        self.metadata_structure = metadata_structure  # metadata_structure is a Db_structure obj
-        self.mode = mode  # TRUE if it is update, FALSE if it is submission.
+    def get_column_name(self, column_displayname):
+        if column_displayname in self.schema_columns:
+            column_name = [x["name"] for x in self.schema if x["text"] == column_displayname]
+        elif column_displayname in self.link_columns:
+            column_name = [x["name"] for x in self.link["connections"] if x["display_name"] == column_displayname]
+        if len(column_name) != 1:
+            sys.exit("invalid column name in %s. There has to be 1 and only 1 %s" % (self.name, column_displayname))
+        else:
+            return column_name[0]
 
-    def read(self, file):
-        wb = xlrd.open_workbook(file)
-        sheet_names = wb.sheet_names()
-        all_sheets = OrderedDict()
-        data_structure = self.metadata_structure
-        for sheet in sheet_names:
-            if sheet not in data_structure.schema.keys():  # skip "Instructions" and "Lists"
-                continue
-            sheet_obj = wb.sheet_by_name(sheet)
-            columns = [str(sheet_obj.cell(1, col_index).value).rstrip() for col_index in range(sheet_obj.ncols)]  # start from row number 1 to skip header
-            dict_list = []
-            all_database_fields = data_structure.get_all_fields(sheet)
-            for database_field in all_database_fields:
-                if database_field not in columns:
-                    # logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
-                    print("version change history:")
-                    pp = pprint.PrettyPrinter(indent=2)
-                    pp.pprint(versionNo)
-                    logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
-            accession_rule = data_structure.get_accession_rule(sheet)
-            for row_index in range(2, sheet_obj.nrows):
-                row_data = OrderedDict()
-                for col_index in range(sheet_obj.ncols):
-                    column_displayname = columns[col_index]
-                    column_name = data_structure.get_column_name(sheet, column_displayname)
-                    data_type = data_structure.get_data_type(sheet, column_displayname)
-                    value = sheet_obj.cell(row_index, col_index).value
-                    ctype = sheet_obj.cell(row_index, col_index).ctype
-                    value = _process_value(value, column_displayname)
-                    row_data[column_name] = value  # or use columan display name? 
+    def get_data_type(self, column_displayname):
+        if column_displayname in self.schema_columns:
+            data_type = [x["type"] for x in self.schema if x["text"] == column_displayname]
+        elif column_displayname in self.link_columns:
+            data_type = ["text"]
+        return data_type[0]
 
-                if _filter_by_accession():
-                    dict_list.append(row_data)
+    def get_islink(self, column_displayname):
+        if column_displayname in self.link_columns:
+            return_value = 1
+        else:
+            return_value = 0
+        return return_value
 
-                    all_sheets[sheet] = dict_list
-
-            # Validate with schema if desired
-            # Return something Uploader can understand.  It can be a simple dict, or if it gets complicated enough, make a
-            # new Metadata class and return an instance of that.
-            return all_sheets
-
-        def _process_value(value, column_displayname):
-            pass
-
-        def _filter_by_accession():
-            pass
+    def verify_column_names(self, column_names):
+        all_database_fields = self.all_columns
+        # compare two lists: all_data_fields and column_names
+        for database_field in all_database_fields:
+            if database_field not in column_names:
+                # logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
+                print("version change history:")
+                pp = pprint.PrettyPrinter(indent=2)
+                version_number = self.get_version()
+                pp.pprint(version_number)
+                logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, self.name))
 
 
-class Row_data:
-    def __init__(self):
-        pass
+class RowData:
+    def __init__(self, sheet_structure):
+        self.value = OrderedDict()
+        self.relationships = dict()
+        self.structure = sheet_structure
+        self.sheet = sheet_structure.name
+
+    def add(self, display_name, value):
+        if self.structure.get_islink(display_name):
+            # do link stuff
+            self.relationships[display_name] = value
+        else:
+            self.value[display_name] = value
+
+    def filter_by_accession(self, isupdate):
+        user_accession_rule = self.structure.user_accession_rule
+        system_accession_rule = self.structure.system_accession_rule
+        if "User accession" in self.value:
+            user_accession = self.value["User accession"]
+        else:
+            user_accession = ''
+        if "System Accession" in self.value:
+            system_accession = self.value["System Accession"]
+        else:
+            system_accession = ''
+        if isupdate:
+            if user_accession.startswith(user_accession_rule) or system_accession.startswith(system_accession_rule):
+                return 1
+            else:
+                logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % self.sheet)
+                return 0
+        else:
+            if system_accession != '':
+                logging.info("Skip %s in %s" % (system_accession, self.sheet))
+            elif user_accession.startswith(user_accession_rule):
+                return 1
+            else:
+                logging.error("Please provide valid User accessions in %s! It should start with %s" % (self.sheet, user_accession_rule))
+
 
     def get_all_dict(self):  # return a dictionary with all the data in Row_data obj
         pass
 
-    def get_value_dict(self):  # return a dictionary with pure value (not links) in Row_data obj
+    def get_schema_dict(self):  # return a dictionary with pure value (not links) in Row_data obj
         pass
 
     def get_link_dict(self):  # return a dictionary with all the links in Row data pbj
         pass
 
-    def get_sheet(self):  # the the sheet name from row_data obj
-        pass
-
 
 class Metadata:
-    def __init__(self):
-        pass
-
-    def read_structure(self, data_structure):  # input is Db_structure obj.
-        pass
+    def __init__(self, data_structure, isupdate):
+        self.structure = data_structure  # input is a database_structure_obj
+        self.isupdate = isupdate
+        self.all_rows = []
 
     def read_file(self, file):  # read excel file.
+        workbook = xlrd.open_workbook(file)
+        sheet_names = workbook.sheet_names()
+        data_structure_obj = self.structure
+        for sheet in sheet_names:
+            if sheet not in data_structure_obj.schema_dict.keys():  # skip "Instructions" and "Lists"
+                continue
+            sheet_obj = workbook.sheet_by_name(sheet)
+            sheet_structure = SheetStructure(data_structure_obj, sheet)
+            column_names = [str(sheet_obj.cell(EXCEL_HEADER_ROW, col_index).value).rstrip() for col_index in range(sheet_obj.ncols)]  # start from row number 1 to skip header
+
+            sheet_structure.verify_column_names(column_names)
+            for row_index in range(EXCEL_DATA_START_ROW, sheet_obj.nrows):
+                row_obj = RowData(sheet_structure)
+                for col_index in range(sheet_obj.ncols):
+                    column_displayname = column_names[col_index]
+
+                    # column_name = SheetStructure.get_column_name(column_displayname)
+                    # data_type = SheetStructure.get_data_type(column_displayname)
+                    # islink = SheetStructure.get_islink(column_displayname)
+                    value = sheet_obj.cell(row_index, col_index).value
+                    ctype = sheet_obj.cell(row_index, col_index).ctype
+                    value = self._process_value(value, ctype, column_displayname)
+                    row_obj.add(column_displayname, value)  # or use columan display name?
+
+                if row_obj.filter_by_accession(self.isupdate):
+                    self.add_row(row_obj)
+
+    def _process_value(self, value, ctype, column_displayname):
         pass
 
-    def add_row(self, row):  # add row data obj to the metadata obj.
-        pass
-
-    def get_sheet_all_dict(self, sheet):
-        pass
-
-    def get_sheet_value_dict(self, sheet):
-        pass
-
-    def get_sheet_link_dict(self, sheet):
-        pass
+    def add_row(self, row_obj):  # add row data obj to the metadata obj.
+        self.all_rows.append(row_obj)
 
 
 class AccessionEnforcer:
@@ -252,7 +289,7 @@ def get_args():
         '--update',
         '-u',
         action="store_true",
-        dest="mode",
+        dest="isupdate",
         help="Run mode. Without the flag (default), only records without systerm accession and without \
         matching user accession with be posted to the database. All the records with system accession in the \
         excel with be ignored. For records without system accession but have user accessions, the user accession \
@@ -295,17 +332,16 @@ def main():
         action_url_meta = TESTURL_META
         action_url_submit = TESTURL_SUBMIT
 
-    data_structure_obj = Db_structure(action_url_meta, ALL_CATEGORIES)
-    metadata_obj = Metadata()
-    metadata_obj.read_structure(data_structure_obj)
+    data_structure_obj = DatabaseStructure(action_url_meta, ALL_CATEGORIES)
+    metadata_obj = Metadata(data_structure_obj, args.isupdate)
     metadata_obj.read_file(args.excel)
-    metadata_obj.read_mode(args.mode)
+    ipdb.set_trace()
     metadata_obj.duplication_check()
     metadata_obj.sys_acc_assign()
-    for row_obj in metadata_obj.all_value_rows():
+    for row_obj in metadata_obj.all_rows:
         # upload here...
         pass
-    for row_obj in metadata_obj.all_link_rows():
+    for row_obj in metadata_obj.all_rows:
         # upload here...
         pass
 
