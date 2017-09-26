@@ -18,6 +18,11 @@ TESTURL_META = 'http://target.wustl.edu:8006'
 TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
 VERSIONURL = URL_META + '/api/version'
 
+# The ctype represents in xlrd package parsering excel file:
+CTYPE_NUMBER = 2
+CTYPE_DATE = 3
+CTYPE_BOOLEAN = 4
+
 # The database json name : excel worksheet name correlation:
 ALL_CATEGORIES = {"assay": "Assay",
                   "bioproject": "Bioproject",
@@ -84,6 +89,14 @@ class StructureBuilder:
     def get_all_fields(self, sheet):  # from sheet name get all fields from schema and linkto.
         pass
 
+    def get_accession_rule(self, sheet)
+        pass
+
+    def get_column_name(self, sheet, column_displayname)
+        pass
+
+    def get_data_type(self, sheet, column_displayname)
+        pass
 
 class ExcelParser:
 
@@ -94,6 +107,7 @@ class ExcelParser:
     def read(self, file):
         wb = xlrd.open_workbook(file)
         sheet_names = wb.sheet_names()
+        all_sheets = OrderedDict()
         data_structure = self.metadata_structure
         for sheet in sheet_names:
             if sheet not in data_structure.schema.keys():  # skip "Instructions" and "Lists"
@@ -102,14 +116,6 @@ class ExcelParser:
             columns = [str(sheet_obj.cell(1, col_index).value).rstrip() for col_index in range(sheet_obj.ncols)]  # start from row number 1 to skip header
             dict_list = []
             all_database_fields = data_structure.get_all_fields(sheet)
-            {x['text']: {"column_name": x['name'], "data_type": x["type"]} for x in data_structure.schema[sheet] if "text" in x}
-
-
-
-            # following from original script:
-            dict_list = []
-            column_name_type_dict = {x['text']: {"column_name": x['name'], "data_type": x["type"]} for x in schema_json[Sheet] if 'text' in x}
-            all_database_fields = list(column_name_type_dict.keys()) + list(ColumnnameToRelationship[Sheet].keys())
             for database_field in all_database_fields:
                 if database_field not in columns:
                     # logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
@@ -117,15 +123,33 @@ class ExcelParser:
                     pp = pprint.PrettyPrinter(indent=2)
                     pp.pprint(versionNo)
                     logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, Sheet))
-            accession_rule = [x['placeholder'] for x in schema_json[Sheet] if x['text'] == "User accession"][0][:-4]
+            accession_rule = data_structure.get_accession_rule(sheet)
+            for row_index in range(2, sheet_obj.nrows):
+                row_data = OrderedDict()
+                for col_index in range(sheet_obj.ncols):
+                    column_displayname = columns[col_index]
+                    column_name = data_structure.get_column_name(sheet, column_displayname)
+                    data_type = data_structure.get_data_type(sheet, column_displayname)
+                    value = sheet_obj.cell(row_index, col_index).value
+                    ctype = sheet_obj.cell(row_index, col_index).ctype
+                    value = _process_value(value, column_displayname)
+                    row_data[column_name] = value  # or use columan display name? 
 
+                if _filter_by_accession():
+                    dict_list.append(row_data)
 
+                    all_sheets[sheet] = dict_list
 
         # Validate with schema if desired
         # Return something Uploader can understand.  It can be a simple dict, or if it gets complicated enough, make a
         # new Metadata class and return an instance of that.
-        return {}
+        return all_sheets
 
+        def _process_value(value, column_displayname)
+            pass
+
+        def _filter_by_accession()
+            pass
 
 class AccessionEnforcer:
     def __init__(self, schema_source):

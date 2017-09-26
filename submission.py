@@ -222,6 +222,14 @@ def main():
 
 
 def multi_excel2JSON(file, schema_json, ColumnnameToRelationship, mode, versionNo):
+    """
+    it does blah blah blah.
+
+    :param: file - is a file object.
+    :param: schema_json - dict that blahs
+    :...:
+    :return: it returns unicorns and happiness
+    """
     wb = xlrd.open_workbook(file)
     sheet_names = wb.sheet_names()
     all_sheets = OrderedDict()
