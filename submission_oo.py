@@ -40,7 +40,7 @@ ALL_CATEGORIES = {"assay": "Assay",
                   }
 
 
-class StructureBuilder:
+class Db_structure:
     def __init__(self, url, categories):
         self.url = url
         self.categories = categories  # it is a dictionary
@@ -89,19 +89,20 @@ class StructureBuilder:
     def get_all_fields(self, sheet):  # from sheet name get all fields from schema and linkto.
         pass
 
-    def get_accession_rule(self, sheet)
+    def get_accession_rule(self, sheet):
         pass
 
-    def get_column_name(self, sheet, column_displayname)
+    def get_column_name(self, sheet, column_displayname):
         pass
 
-    def get_data_type(self, sheet, column_displayname)
+    def get_data_type(self, sheet, column_displayname):
         pass
+
 
 class ExcelParser:
 
     def __init__(self, metadata_structure, mode):
-        self.metadata_structure = metadata_structure
+        self.metadata_structure = metadata_structure  # metadata_structure is a Db_structure obj
         self.mode = mode  # TRUE if it is update, FALSE if it is submission.
 
     def read(self, file):
@@ -140,16 +141,57 @@ class ExcelParser:
 
                     all_sheets[sheet] = dict_list
 
-        # Validate with schema if desired
-        # Return something Uploader can understand.  It can be a simple dict, or if it gets complicated enough, make a
-        # new Metadata class and return an instance of that.
-        return all_sheets
+            # Validate with schema if desired
+            # Return something Uploader can understand.  It can be a simple dict, or if it gets complicated enough, make a
+            # new Metadata class and return an instance of that.
+            return all_sheets
 
-        def _process_value(value, column_displayname)
+        def _process_value(value, column_displayname):
             pass
 
-        def _filter_by_accession()
+        def _filter_by_accession():
             pass
+
+
+class Row_data:
+    def __init__(self):
+        pass
+
+    def get_all_dict(self):  # return a dictionary with all the data in Row_data obj
+        pass
+
+    def get_value_dict(self):  # return a dictionary with pure value (not links) in Row_data obj
+        pass
+
+    def get_link_dict(self):  # return a dictionary with all the links in Row data pbj
+        pass
+
+    def get_sheet(self):  # the the sheet name from row_data obj
+        pass
+
+
+class Metadata:
+    def __init__(self):
+        pass
+
+    def read_structure(self, data_structure):  # input is Db_structure obj.
+        pass
+
+    def read_file(self, file):  # read excel file.
+        pass
+
+    def add_row(self, row):  # add row data obj to the metadata obj.
+        pass
+
+    def get_sheet_all_dict(self, sheet):
+        pass
+
+    def get_sheet_value_dict(self, sheet):
+        pass
+
+    def get_sheet_link_dict(self, sheet):
+        pass
+
 
 class AccessionEnforcer:
     def __init__(self, schema_source):
@@ -253,13 +295,19 @@ def main():
         action_url_meta = TESTURL_META
         action_url_submit = TESTURL_SUBMIT
 
-    meta_data_structure = StructureBuilder(action_url_meta, ALL_CATEGORIES)
-    ipdb.set_trace()
-    reader = ExcelParser(meta_data_structure, args.mode)
-    submission_dict = reader.read(args.excel)
-    AccessionEnforcer.duplication_check(submission_dict)
-    AccessionEnforcer.sys_acc_assign(submission_dict)
-    Uploader.upload(submission_dict)
+    data_structure_obj = Db_structure(action_url_meta, ALL_CATEGORIES)
+    metadata_obj = Metadata()
+    metadata_obj.read_structure(data_structure_obj)
+    metadata_obj.read_file(args.excel)
+    metadata_obj.read_mode(args.mode)
+    metadata_obj.duplication_check()
+    metadata_obj.sys_acc_assign()
+    for row_obj in metadata_obj.all_value_rows():
+        # upload here...
+        pass
+    for row_obj in metadata_obj.all_link_rows():
+        # upload here...
+        pass
 
 
 if __name__ == '__main__':
