@@ -42,18 +42,18 @@ ALL_CATEGORIES = {"assay": "Assay",
                   }
 
 
-class DatabaseStructure:
+class FileData:
     def __init__(self, url, categories):
         self.url = url
         self.categories = categories  # it is a dictionary
         self.schema_dict = self._url_to_json('/schema/')
         self.link_dict = self._url_to_json('/schema/relationships/')
         self.version = self.get_version('/api/version')
-
+        self.data = []
         """
         There are two links in "Assay" named "assay_input", one points to biosample and the other points to library.
         I have to change them to "assay_input_biosample" and "assay_input_library" before useing them as key in my new dict.
-        
+
         name example:
         sheet: "File"
         category: "file"
@@ -72,6 +72,12 @@ class DatabaseStructure:
         # self.build_linkto
         # self.build_contain_links
 
+    def isupdate(self, isupdate):
+        self.isupdate = isupdate
+
+    def notest(self, notest):
+        self.notest = notest
+
     def _url_to_json(self, string):
         new_dict = {}
         for db_category, sheet in self.categories.items():
@@ -84,12 +90,50 @@ class DatabaseStructure:
         full_url = self.url + version_string
         return requests.get(full_url).json()
 
+    def read_file(self, file):  # read excel file.
+        """
+        This method does a lot:
+        1. Read the excel file.
+        2. Compare the column names to database fields for each sheet.
+        3. For each cell in excel file, massage value in excel to fit database datatype.
+        4. After processing each row, only append it if the accession is valid.
+        5. After processing each sheet, query database to make sure all there is no accession conflict within the sheet and with existing records.
+        """
+        workbook = xlrd.open_workbook(file)
+        sheet_names = workbook.sheet_names()
+        for sheet in sheet_names:
+            if sheet not in self.schema_dict.keys():  # skip "Instructions" and "Lists"
+                continue
+            sheet_obj = workbook.sheet_by_name(sheet)
+            column_names = [str(sheet_obj.cell(EXCEL_HEADER_ROW, col_index).value).rstrip() for col_index in range(sheet_obj.ncols)]  # start from row number 1 to skip header
 
-class SheetStructure:
-    def __init__(self, structure_obj, sheet):
+            sheet_data = SheetData(self, sheet)
+            sheet_data.verify_column_names(column_names)
+            for row_index in range(EXCEL_DATA_START_ROW, sheet_obj.nrows):
+                row_obj = RowData(sheet_data)
+                for col_index in range(sheet_obj.ncols):
+                    column_displayname = column_names[col_index]
+
+                    # column_name = SheetData.get_column_name(column_displayname)
+                    # data_type = SheetData.get_data_type(column_displayname)
+                    # islink = SheetData.islink(column_displayname)
+                    value = sheet_obj.cell(row_index, col_index).value
+                    ctype = sheet_obj.cell(row_index, col_index).ctype
+                    value = sheet_data.process_value(value, ctype, column_displayname, workbook.datemode)
+                    row_obj.add(column_displayname, value)  # or use columan display name?
+
+                if row_obj.filter_by_accession(self.isupdate):
+                    sheet_data.add_record(row_obj)
+            sheet_data.duplication_check(self.isupdate, self.notest)
+            self.data.append(sheet_data)
+
+
+class SheetData:
+    def __init__(self, file_data, sheet):
         self.name = sheet
-        schema = structure_obj.schema_dict[sheet]  # schema is a list
-        link = structure_obj.link_dict[sheet]  # link is a dictionary, link["connections"] is a list.
+        self.sheeturl = file_data.url + '/api/' + sheet
+        schema = file_data.schema_dict[sheet]  # schema is a list
+        link = file_data.link_dict[sheet]  # link is a dictionary, link["connections"] is a list.
         self.schema = schema
         self.link = link
         self.categories = link["all"]
@@ -100,7 +144,8 @@ class SheetStructure:
         self.schema_columns = [x["text"] for x in schema]
         self.link_columns = [x["display_name"] for x in link["connections"]]
         self.all_columns = self.schema_columns + self.link_columns
-        self.version = structure_obj.version
+        self.version = file_data.version
+        self.all_recrods = []
 
     # def get_column_name(self, column_displayname):
     #     if column_displayname in self.schema_columns:
@@ -112,19 +157,22 @@ class SheetStructure:
     #     else:
     #         return column_name[0]
 
-    # def get_data_type(self, column_displayname):
-    #     if column_displayname in self.schema_columns:
-    #         data_type = [x["type"] for x in self.schema if x["text"] == column_displayname]
-    #     elif column_displayname in self.link_columns:
-    #         data_type = ["text"]
-    #     return data_type[0]
+    def get_data_type(self, column_displayname):
+        if column_displayname == "zip_code" or column_displayname == "batchId" or column_displayname == "System Accession":
+            data_type = "text"
+        elif column_displayname in self.schema_columns:
+            data_type_list = [x["type"] for x in self.schema if x["text"] == column_displayname]
+            data_type = data_type_list[0]
+        elif column_displayname in self.link_columns:
+            data_type = "text"
+        return data_type
 
-    # def get_islink(self, column_displayname):
-    #     if column_displayname in self.link_columns:
-    #         return_value = 1
-    #     else:
-    #         return_value = 0
-    #     return return_value
+    def islink(self, column_displayname):
+        if column_displayname in self.link_columns:
+            return_value = 1
+        else:
+            return_value = 0
+        return return_value
 
     def verify_column_names(self, column_names):
         all_database_fields = self.all_columns
@@ -138,26 +186,109 @@ class SheetStructure:
                 pp.pprint(version_number)
                 logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, self.name))
 
-    def process_value(self, value, ctype, column_displayname):
-        pass
+    def process_value(self, value, ctype, column_displayname, datemode):
+        data_type = self.get_data_type(column_displayname)
+        if column_displayname == "User accession" and (value == "NA" or value == ''):  # always us "NA" if user accession is empty
+            value == "NA"
+        elif ctype == CTYPE_BOOLEAN:
+            if value:
+                value = "TRUE"
+            else:
+                value = "FALSE"
+        # now consider data_type:
+        elif data_type == "text" and ctype == 2:
+            value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+        elif data_type == "date":
+            if value == "NA":
+                value = '1970-01-01'
+            elif ctype == CTYPE_DATE:
+                value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
+        elif data_type == "float":
+            if ctype == CTYPE_NUMBER:
+                value = round(value, 2)
+            else:
+                sys.exit("please use number for %s in %s" % (column_displayname, self.name))
+        elif data_type == "number" and value == 'NA':  # assign number field to -1 if it is NA in the excel.
+            value = -1
+            logging.info("Change NA to -1 for %s in %s." % (column_displayname, self.name))
 
-class RowData:
-    def __init__(self, sheet_structure):
-        self.value = OrderedDict()
+        return value
+
+    def add_record(self, row_obj):  # add row data obj to the metadata obj.
+        self.all_records.append(row_obj)
+
+    def fetch_all(self, categories):
+        get_url = url + '/api/' + categories
+        request = requests.get(get_url)
+        return request.json()[categories]  # returns a list of existing records.
+
+    def duplication_check(self, isupdate, notest):
+        sheeturl = self.sheeturl
+        if isupdate:
+            existing_sheet_data = self.get(sheeturl)
+            existing_records
+        for record in self.all_recrods:
+
+
+class RecordObject:
+    def __init__(self):
+        self.schema = dict()
         self.relationships = dict()
-        self.structure = sheet_structure
-        self.sheet = sheet_structure.name
 
-    def add(self, display_name, value):
-        if self.structure.get_islink(display_name):
+    def get_sheet(sheet):
+        self.sheet = sheet
+
+    def add(self, column_displayname, value):
+        column_name = structure.get_column_name(self.sheet, column_displayname)
+        if self.sheet.islink(column_displayname):
             # do link stuff
-            self.relationships[display_name] = value
+            accession_list = value.split(",")  # split value in cell by ",""
+            linkto = structure.get_linkto(self.sheet, column_displayname)
+            if column_name in self.relationships:
+                self.relationships[column_name][linkto] = accession_list
+            else:
+                self.relationships[column_name] = {linkto: accession_list}
         else:
-            self.value[display_name] = value
+            self.schema[column_name] = value
+
+    def get_token(self, token):
+        self.token = {"Authorization": bearer_token}
+
+    def fetch_record(self, url, category, categories, system_accession):
+        self.sheet = 
+        get_url = url + '/api/' + categories + '/' + system_accession
+        main_obj = requests.get(get_url).json()["mainObj"][category]
+        self.schema = main_obj[category]
+        self.relationships = main_obj[added]
+
+    def submit_record(self, url, category, categories, system_accession):
+        post_url = url + '/api/' + categories + '/' + system_accession
+        post_body = self.schema
+        request = requests.post(post_url, headers=self.token, data=post_body)
+
+    def link_all(self):
+        system_accession = self.schema["accession"]
+        for column_name in self.relationships:
+            for linkto_category in self.relationships[column_name]:
+                accession_list = self.relationships[column_name][linkto_category]
+                if len(accession_list) > 0:
+                    for linkto_accession in accession_list:
+                        link_add(url, category, categories, system_accession， linkto_category, linkto_accession, "add")
+
+    def link_add(self, url, category, categories, system_accession， linkto_category, linkto_accession, connection_name, direction):
+        linkurl = url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
+        link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
+        request = requests.post(linkurl, headers=self.token, data=link_body)
 
     def filter_by_accession(self, isupdate):
-        user_accession_rule = self.structure.user_accession_rule
-        system_accession_rule = self.structure.system_accession_rule
+        """
+        fileter TRUE or FALSE based on user accession and system accession of the record.
+        During update, return TRUE if at least one of user accession or system accession exists and start with accession rule.
+        During submission of new record, return TRUE if system accession does not exist and user accession start with accession rule.
+
+        """
+        user_accession_rule = self.sheet.user_accession_rule
+        system_accession_rule = self.sheet.system_accession_rule
         if "User accession" in self.value:
             user_accession = self.value["User accession"]
         else:
@@ -170,74 +301,16 @@ class RowData:
             if user_accession.startswith(user_accession_rule) or system_accession.startswith(system_accession_rule):
                 return 1
             else:
-                logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % self.sheet)
+                logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % self.sheet.name)
                 return 0
         else:
             if system_accession != '':
-                logging.info("Skip %s in %s" % (system_accession, self.sheet))
+                logging.info("Skip %s in %s" % (system_accession, self.sheet.name))
+                return 0
             elif user_accession.startswith(user_accession_rule):
                 return 1
             else:
-                logging.error("Please provide valid User accessions in %s! It should start with %s" % (self.sheet, user_accession_rule))
-
-
-    def get_all_dict(self):  # return a dictionary with all the data in Row_data obj
-        pass
-
-    def get_schema_dict(self):  # return a dictionary with pure value (not links) in Row_data obj
-        pass
-
-    def get_link_dict(self):  # return a dictionary with all the links in Row data pbj
-        pass
-
-
-class Metadata:
-    def __init__(self, data_structure, isupdate):
-        self.structure = data_structure  # input is a database_structure_obj
-        self.isupdate = isupdate
-        self.all_rows = []
-
-    def read_file(self, file):  # read excel file.
-        workbook = xlrd.open_workbook(file)
-        sheet_names = workbook.sheet_names()
-        data_structure_obj = self.structure
-        for sheet in sheet_names:
-            if sheet not in data_structure_obj.schema_dict.keys():  # skip "Instructions" and "Lists"
-                continue
-            sheet_obj = workbook.sheet_by_name(sheet)
-            sheet_structure = SheetStructure(data_structure_obj, sheet)
-            column_names = [str(sheet_obj.cell(EXCEL_HEADER_ROW, col_index).value).rstrip() for col_index in range(sheet_obj.ncols)]  # start from row number 1 to skip header
-
-            sheet_structure.verify_column_names(column_names)
-            for row_index in range(EXCEL_DATA_START_ROW, sheet_obj.nrows):
-                row_obj = RowData(sheet_structure)
-                for col_index in range(sheet_obj.ncols):
-                    column_displayname = column_names[col_index]
-
-                    # column_name = SheetStructure.get_column_name(column_displayname)
-                    # data_type = SheetStructure.get_data_type(column_displayname)
-                    # islink = SheetStructure.get_islink(column_displayname)
-                    value = sheet_obj.cell(row_index, col_index).value
-                    ctype = sheet_obj.cell(row_index, col_index).ctype
-                    value = sheet_structure.process_value(value, ctype, column_displayname)
-                    row_obj.add(column_displayname, value)  # or use columan display name?
-
-                if row_obj.filter_by_accession(self.isupdate):
-                    self.add_row(row_obj)
-
-    def add_row(self, row_obj):  # add row data obj to the metadata obj.
-        self.all_rows.append(row_obj)
-
-
-class AccessionEnforcer:
-    def __init__(self, schema_source):
-            self.schema_source = schema_source
-
-    def duplication_check(self):
-        pass
-
-    def sys_acc_assign(self):
-        pass
+                sys.exit("Please provide valid User accessions in %s! It should start with %s" % (self.sheet.name, user_accession_rule))
 
 
 class Uploader:
@@ -331,8 +404,9 @@ def main():
         action_url_meta = TESTURL_META
         action_url_submit = TESTURL_SUBMIT
 
-    data_structure_obj = DatabaseStructure(action_url_meta, ALL_CATEGORIES)
-    metadata_obj = Metadata(data_structure_obj, args.isupdate)
+    metadata_obj = FileData(action_url_meta, ALL_CATEGORIES)
+    metadata_obj.isupdate(args.isupdate)
+    metadata_obj.notest(args.notest)
     metadata_obj.read_file(args.excel)
     ipdb.set_trace()
     metadata_obj.duplication_check()
