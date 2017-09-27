@@ -102,29 +102,29 @@ class SheetStructure:
         self.all_columns = self.schema_columns + self.link_columns
         self.version = structure_obj.version
 
-    def get_column_name(self, column_displayname):
-        if column_displayname in self.schema_columns:
-            column_name = [x["name"] for x in self.schema if x["text"] == column_displayname]
-        elif column_displayname in self.link_columns:
-            column_name = [x["name"] for x in self.link["connections"] if x["display_name"] == column_displayname]
-        if len(column_name) != 1:
-            sys.exit("invalid column name in %s. There has to be 1 and only 1 %s" % (self.name, column_displayname))
-        else:
-            return column_name[0]
+    # def get_column_name(self, column_displayname):
+    #     if column_displayname in self.schema_columns:
+    #         column_name = [x["name"] for x in self.schema if x["text"] == column_displayname]
+    #     elif column_displayname in self.link_columns:
+    #         column_name = [x["name"] for x in self.link["connections"] if x["display_name"] == column_displayname]
+    #     if len(column_name) != 1:
+    #         sys.exit("invalid column name in %s. There has to be 1 and only 1 %s" % (self.name, column_displayname))
+    #     else:
+    #         return column_name[0]
 
-    def get_data_type(self, column_displayname):
-        if column_displayname in self.schema_columns:
-            data_type = [x["type"] for x in self.schema if x["text"] == column_displayname]
-        elif column_displayname in self.link_columns:
-            data_type = ["text"]
-        return data_type[0]
+    # def get_data_type(self, column_displayname):
+    #     if column_displayname in self.schema_columns:
+    #         data_type = [x["type"] for x in self.schema if x["text"] == column_displayname]
+    #     elif column_displayname in self.link_columns:
+    #         data_type = ["text"]
+    #     return data_type[0]
 
-    def get_islink(self, column_displayname):
-        if column_displayname in self.link_columns:
-            return_value = 1
-        else:
-            return_value = 0
-        return return_value
+    # def get_islink(self, column_displayname):
+    #     if column_displayname in self.link_columns:
+    #         return_value = 1
+    #     else:
+    #         return_value = 0
+    #     return return_value
 
     def verify_column_names(self, column_names):
         all_database_fields = self.all_columns
@@ -138,6 +138,8 @@ class SheetStructure:
                 pp.pprint(version_number)
                 logging.warning("warning! column %s is missing in %s. Please update your excel file to the latest version." % (database_field, self.name))
 
+    def process_value(self, value, ctype, column_displayname):
+        pass
 
 class RowData:
     def __init__(self, sheet_structure):
@@ -217,14 +219,11 @@ class Metadata:
                     # islink = SheetStructure.get_islink(column_displayname)
                     value = sheet_obj.cell(row_index, col_index).value
                     ctype = sheet_obj.cell(row_index, col_index).ctype
-                    value = self._process_value(value, ctype, column_displayname)
+                    value = sheet_structure.process_value(value, ctype, column_displayname)
                     row_obj.add(column_displayname, value)  # or use columan display name?
 
                 if row_obj.filter_by_accession(self.isupdate):
                     self.add_row(row_obj)
-
-    def _process_value(self, value, ctype, column_displayname):
-        pass
 
     def add_row(self, row_obj):  # add row data obj to the metadata obj.
         self.all_rows.append(row_obj)
