@@ -285,22 +285,27 @@ class Poster:
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         user_name = self.user_name
         get_url = url + '/api/' + categories
-        request = requests.get(get_url).json()
-        full_list = request[categories]  # returns a list of existing records.
+        response = requests.get(get_url).json()
+        full_list = response[categories]  # returns a list of existing records.
         return [x for x in full_list if x['user'] == user_name]
 
     def submit_record(self, row_data):
         sheet_name = row_data.sheet_name
         meta_url, category, categories = self.get_sheet_info(sheet_name)
+        submit_url = self.submit_url
+        saved_submission_url = url_submit + "/api/submission"
         if row_data.schema["accession"] == "":
             row_data.remove("accession")
             post_url = metaurl + '/api/' + categories
         else:
             post_url = metaurl + '/api/' + categories + '/' + system_accession
         post_body = row_data.schema
-        request = requests.post(post_url, headers=self.token_header, data=post_body)
+        response = requests.post(post_url, headers=self.token_header, data=post_body)
+        if response['statusCode'] != 200:
+            logging.error("%s update failed in line 305!" % system_accession)
+        system_accession = response["accession"]
 
-    def link_all(self):
+    def link_record(self):
         system_accession = self.schema["accession"]
         for column_name in self.relationships:
             for linkto_category in self.relationships[column_name]:
@@ -312,16 +317,16 @@ class Poster:
     def link_add(self, url, category, categories, system_accession， linkto_category, linkto_accession, connection_name, direction):
         linkurl = url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
         link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
-        request = requests.post(linkurl, headers=self.token, data=link_body)
+        response = requests.post(linkurl, headers=self.token, data=link_body)
 
     def upload_sheet(self, sheet_data):
         sheet_name = sheet_data.name
-        for record in sheet_data.all_recrods:
+        for record in sheet_data.all_records:
             self.submit_record(url, category)
 
     def duplication_check(self, sheet_data):
         """
-        1. make sure all the system accessions and user accessions are unique in the sheet.
+        Make sure all the system accessions and user accessions are unique in the sheet.
         To update records, make sure each row has a valid record exisint in the database. Fetch both system accession and user accession for all records.
         """
         isupdate = self.isupdate
@@ -334,7 +339,7 @@ class Poster:
             sys.exit("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
         existing_user_system_accession_pair = [{x["user_accession"]: x["accession"]} for x in existing_sheet_data]
         user_accession_list = []
-        for record in sheet_data.all_recrods:
+        for record in sheet_data.all_records:
             accession = record.schema["accession"]
             user_accession = record.schema["user_accession"]
             if isupdate:
@@ -378,13 +383,54 @@ class Poster:
                     user_accession_list.append(user_accession)
 
 
+class BookData:
+    def __init__(self, meta_strcture):
+        self.meta_strcture = meta_strcture
+        self.data = dict()
+        self.submission_log = dict()
+
+    def add_sheet(self, sheet_data):
+        sheet_name = sheet_data.name
+        self.data[sheet_name] = sheet_data
+
+    def save_submission(self, sheet_name, accession)
+        category = 
+        if category in self.submission_log:
+            self.submission_log[category].append(accession)
+        else:
+            self.submission_log.update({category:[accession]})
+
+    def swipe_accession(self):
+        accession_table=dict()
+        for sheet in self.data:
+            sheet_data = self.data[sheet]
+            all_records = sheet_data.all_records
+            for record in all_records:
+                user_accession = record.schema['user_accession']
+                system_accession = record.schema['accession']
+                accession_table.update({user_accession:system_accession})
+                if old_accession in record:
+                    accession_table.update({record.old_accession:system_accession})
+
+        for sheet in self.data:
+            sheet_data = self.data[sheet]
+            all_records = sheet_data.all_records
+                for record in all_records:
+                    for column_name in record.relationships:
+                        for linkto in record.relationships[column_name]
+                            accession_list = record.relationships[column_name][linkto]
+                                for index, accession in enumerate(accession_list):
+                                    if accession in accession_table:
+                                        accession_list[index] = accession_table[accession]
+
+
 class SheetData:
     def __init__(self, sheet):
         self.name = sheet
-        self.all_recrods = []
+        self.all_records = []
 
     def add_record(self, row_data):
-        self.all_recrods.append(row_data)
+        self.all_records.append(row_data)
 
     def new_row(self):
         row_obj = RowData(self.name)
@@ -510,6 +556,7 @@ def main():
     poster = Poster(args.token, action_url_meta, action_url_submit, args.isupdate, args.notest, meta_strcture)
 
     workbook = xlrd.open_workbook(args.excel)
+    book_data = BookData(meta_strcture)
     sheet_names = workbook.sheet_names()
     for sheet in sheet_names:
         if sheet not in meta_strcture.schema_dict.keys():  # skip "Instructions" and "Lists"
@@ -519,9 +566,15 @@ def main():
         sheet_data = reader.read_sheet(sheet_obj)
 
         poster.duplication_check(sheet_data)
-        poster.upload_sheet(sheet_data)
-    for sheet in sheet_names:
-        poster.link_all(sheet_data)
+
+        # Now upload all the records on sheet_data:
+        for record in sheet_data.all_records:
+            poster.submit_record(record)
+        book_data.add(sheet_data)
+    book_data.swipe_accession()
+    for shee_name, sheet_data in book_data.data.items():
+        for record in sheet_data.all_records:
+            poster.link_record(record)
 
 
 
