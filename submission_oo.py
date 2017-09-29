@@ -398,30 +398,33 @@ class BookData:
         if category in self.submission_log:
             self.submission_log[category].append(accession)
         else:
-            self.submission_log.update({category:[accession]})
+            self.submission_log.update({category: [accession]})
 
     def swipe_accession(self):
-        accession_table=dict()
+        """
+        for all the relationships in the bookdata, point it to a system accession according to user accession.
+        """
+        accession_table = dict()
         for sheet in self.data:
             sheet_data = self.data[sheet]
             all_records = sheet_data.all_records
             for record in all_records:
                 user_accession = record.schema['user_accession']
                 system_accession = record.schema['accession']
-                accession_table.update({user_accession:system_accession})
+                accession_table.update({user_accession: system_accession})
                 if old_accession in record:
-                    accession_table.update({record.old_accession:system_accession})
+                    accession_table.update({record.old_accession: system_accession})
 
         for sheet in self.data:
             sheet_data = self.data[sheet]
             all_records = sheet_data.all_records
-                for record in all_records:
-                    for column_name in record.relationships:
-                        for linkto in record.relationships[column_name]
-                            accession_list = record.relationships[column_name][linkto]
-                                for index, accession in enumerate(accession_list):
-                                    if accession in accession_table:
-                                        accession_list[index] = accession_table[accession]
+            for record in all_records:
+                for column_name in record.relationships:
+                    for linkto in record.relationships[column_name]:
+                        accession_list = record.relationships[column_name][linkto]
+                        for index, accession in enumerate(accession_list):
+                            if accession in accession_table:
+                                accession_list[index] = accession_table[accession]
 
 
 class SheetData:
@@ -564,21 +567,19 @@ def main():
         sheet_obj = workbook.sheet_by_name(sheet)
         reader.verify_column_names(sheet_obj)
         sheet_data = reader.read_sheet(sheet_obj)
-
         poster.duplication_check(sheet_data)
 
         # Now upload all the records on sheet_data:
         for record in sheet_data.all_records:
-            poster.submit_record(record)
+            poster.submit_record(record)  # submit the record, and assign system accession to the record.
         book_data.add(sheet_data)
+
     book_data.swipe_accession()
     for shee_name, sheet_data in book_data.data.items():
         for record in sheet_data.all_records:
             poster.link_record(record)
 
 
-
-    metadata_obj.sys_acc_assign()
 
 
 
