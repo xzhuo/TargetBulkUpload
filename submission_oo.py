@@ -334,33 +334,73 @@ class Poster:
         return [x for x in full_list if x['user'] == user_name]
 
     def submit_record(self, row_data):
+        """
+        The row_data is validated, but update, submit, test, notest are processed the same until now.
+        submit or update record row_data to database. if it is not notest, replace accession with random string and submit.
+        if isupdate:
+            if no accession
+                skip
+            else
+                update request
+        else
+            if no accession
+                if notest
+                    submit request
+                else
+                    replace user_accession
+                    submit request
+            else
+                skip
+        """
+        isupdate = self.isupdate
+        notest = self.notest
         sheet_name = row_data.sheet_name
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         submit_url = self.submit_url
 
         accession = row_data.remove("accession")  # it is essentially a dict pop.
+        user_accession = row_data.schema["user_accession"]
         # for update, accession must exists, so it goes to else. for submit, accession must be "".
-        if accession == "":
+        if isupdate and accession != "":
+            post_url = meta_url + '/api/' + categories + '/' + accession
+        elif (not isupdate) and accession == "":
+            if not notest:
+                row_data.replace_accession()
             post_url = meta_url + '/api/' + categories
         else:
-            post_url = meta_url + '/api/' + categories + '/' + accession
+            logging.info("skip record %s %s in %s." %(accession, user_accession, sheet_name))
+            break
+            continue?
         post_body = row_data.schema
-        response = requests.post(post_url, headers=self.token_header, data=post_body)
-        return response.json()
+        response = requests.post(post_url, headers=self.token_header, data=post_body).json()
+
+        if response['statusCode'] != 200:
+            sys.exit("post request of %s %s in %s failed!" %(accession, user_accession, sheet_name))
+        # save the submission:
+        if "accession" in response:
+            accession = response["accession"]
+            record.schema['accession'] = accession
+            record.submission = "submit"
+        else:
+            record.submission = "update"
 
     def link_record(self, row_data):
-        sheet_name = row_data.sheet_name
-        system_accession = row_data.schema["accession"]
-        for column_name in row_data.relationships:
-            for linkto_category in row_data.relationships[column_name]:
-                accession_list = row_data.relationships[column_name][linkto_category]
-                for linkto_accession in accession_list:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
-
-    def link_update(self):
-        pass
+        if row_data.submission == "update":
+            fetch existing record
+            remove link in existing record
+        if row_data.submission == "submit" or row_data.submission == "update":
+            sheet_name = row_data.sheet_name
+            system_accession = row_data.schema["accession"]
+            for column_name in row_data.relationships:
+                for linkto_category in row_data.relationships[column_name]:
+                    accession_list = row_data.relationships[column_name][linkto_category]
+                    for linkto_accession in accession_list:
+                        self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
 
     def link_change(self, sheet_name, system_accession, linkto_category, linkto_accession, connection_name, direction):
+        """
+        direction is either "remove" or "add"
+        """
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
         link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
@@ -368,84 +408,90 @@ class Poster:
         return response.json()
 
     def save_submission(self, book_data):
+        isupdate = self.isupdate
+        submission_log = dict()
+        for sheet_name, sheet_data in book_data.data.items():
+            category = get_category(sheet_name)
+            accession_list = []
+            for record in sheet_data.all_records:
+                if record.submission == isupdate:
+                    accession_list.append(record.schema["accession"])
+            if len(accession_list) > 0:
+                submission_log[category] = accession_list
+
         saved_submission_url = self.submit_url + "/api/submission"
+        if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
+            submission_body = {"details": json.dumps(submission_log), "update": isupdate}
+            submitted_response = requests.post(saved_submission_url, headers=self.token, data=submission_body).json()
+            if submitted_response["statusCode"] == 201:
+                logging.info("Submission has been successfully saved as %s!" % submitted_response["submission_id"])
+            else:
+                logging.error("Fail to save submission!")
 
     def duplication_check(self, sheet_data):
         """
         each record has been validated by themselves.
-        for update, at least one of user or system accession exists, the other one must be "".
-        for submit, system accesion must be "", user accesion must fit the rule.
+        At least one of user or system accession exists, the other one must be "" if don't exists.
 
         Make sure all the system accessions and user accessions are unique in the sheet.
-        To update records, make sure each row has a valid record exisint in the database. Fetch both system accession and user accession for all records.
+        If the record exists in the database, make sure both system and user accession match the record in the database.
+        If there is only one accession in the sheet record, fetch and fill in the other accession from database.
         
-        exit if duplicated system accession or user accession found in the sheet;
-        
-        for update:
-            exit if the record not found in the database, or the record in the database has different user-system accession pair.
-            passed records contains both user and system accession that matchs record in the database.
-        for submit:
-            if test:
-                replace user accesion with a random string, save original accession as record.old_accession.
-                assign all system accession to "".
-            if notest:
-                for record existing in the database, assign system accession to the record.
-                for record do not exist in the database, leave system accession as "".
-
-        I kept all the record there and assigned both system accession and user accession for submission. 
-        Now I can filter that later to remove those with system accesion before upload.
-        Maybe in the future I can add a "submit and update option" to submit new data and update exising ones at same time,
-        and I don't need to change this part for that new fuction.
+        In the end, for records exist in database, both system and user accession must exist in the record;
+        fo new records, only user accession in the record, system accession is ""
         """
-        isupdate = self.isupdate
-        notest = self.notest
+
         sheet_name = sheet_data.name
         existing_sheet_data = self.fetch_all(sheet_name)
         existing_user_accessions = [x['user_accession'] for x in existing_sheet_data]
         if len(existing_user_accessions) != len(set(existing_user_accessions)):
             sys.exit("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
         existing_user_system_accession_pair = {x["user_accession"]: x["accession"] for x in existing_sheet_data}  # python2.7+
+        existing_system_accessions = existing_user_system_accession_pair.values()
         user_accession_list = []
+        system_accession_list = []
         for record in sheet_data.all_records:
             accession = record.schema["accession"]
             user_accession = record.schema["user_accession"]
-            if user_accession in user_accession_list:
-                sys.exit("redundant user accession %s in %s!" % (user_accession, sheet_name))
-            if isupdate:
-                # find if there is redundancy in the list:
-                system_accession_list = []
-                if user_accession == "":  # if user accession does not exist, system accession must exist in both worksheet and database. and it has to be new to system_accession_list.
-                    if accession in system_accession_list:
-                        sys.exit("redundant system accession %s in %s!" % (accession, sheet_name))
-                    elif accession not in existing_user_system_accession_pair.values():
-                        sys.exit("system accession %s in %s does not exist in our database, unable to update it!" % (accession, sheet_name))
-                    else:
-                        matching_user_accession = [k for k, v in existing_user_system_accession_pair.items() if v == accession][0]
-                        system_accession_list.append(accession)
-                        user_accession_list.append(matching_user_accession)
-                        record.add("User accession", matching_user_accession)
-                elif user_accession not in existing_user_accessions:
-                    sys.exit("user accession %s in %s does not exist in our database, unable to update it!" % (user_accession, sheet_name))
-                else:
-                    matching_accession = existing_user_system_accession_pair[user_accession]
-                    logging.info("Found %s user accession %s in our database with system accession %s" % (sheet_name, user_accession, matching_accession))
-                    if matching_accession == accession or accession == "":
+            """
+            three possibilities: 
+            both user and system accession exist; 
+            system accession exists but user accession is "";
+            system accession is "" but user accession exists.
+            """
+            if user_accession != "" and accession != "":
+                if user_accession in existing_user_accessions and existing_user_system_accession_pair[user_accession] == accession:
+                    if user_accession not in user_accession_list and accession not in system_accession_list:
                         user_accession_list.append(user_accession)
-                        system_accession_list.append(matching_accession)
-                        record.add("System Accession", matching_accession)
+                        system_accession_list.append(accession)
                     else:
-                        sys.exit("for the row in %s with user accession %s, the system accession %s does not match our record %s in the database!" % (sheet_name, user_accession, accession, matching_accession))
+                        sys.exit("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
+                else:
+                    sys.exit("accession %s or %s in %s does not match our database record!" % (user_accession, accession, sheet_name))
+            elif user_accession == "" and accession != "":
+                if accession in system_accession_list:
+                    sys.exit("System accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (accession, sheet_name))
+                elif accession not in existing_system_accessions:
+                    sys.exit("System accession %s in %s in invalid. It does not exist in the database." % (accession, sheet_name))
+                else:
+                    matching_user_accession = [k for k,v in existing_user_system_accession_pair.items() if v == accession][0]
+                    user_accession_list.append(matching_user_accession)
+                    system_accession_list.append(accession)
+            else  # user_accession != "" and accession == ""
+                if user_accession in user_accession_list:
+                    sys.exit("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
+                elif user_accession in existing_user_accessions:
+                    matching_accession = existing_user_system_accession_pair[user_accession]
+                    user_accession_list.append(user_accession)
+                    system_accession_list.append(matching_accession)
+                else:
+                    user_accession_list.append(user_accession)
+
 
             else:  # for submission, all the rows are already filtered. All of them have valid user accession, and all the rows with system accession == ''.
                 if not notest:
                     user_accession_list.append(user_accession)
                     record.replace_accession()
-                elif user_accession in existing_user_accessions:
-                    matching_accession = existing_user_system_accession_pair[user_accession]
-                    record.add("System Accession", matching_accession)
-                    user_accession_list.append(user_accession)
-                else:
-                    user_accession_list.append(user_accession)
 
 
 class BookData:
@@ -505,13 +551,11 @@ class SheetData:
         row_data = RowData(self.name, self.meta_structure)
         return row_data
 
-    def filter_add(self, row_data, isupdate):
+    def filter_add(self, row_data):
         """
         1. For records without user accession or system accession, assign "" to the field.
         2. Fileter TRUE or FALSE based on user accession and system accession of the record.
-        During update, return TRUE if at least one of user accession or system accession exists and start with accession rule.
-        During submission of new record, return TRUE if system accession does not exist and user accession start with accession rule.
-        user accession and system accession always exist as key.
+        Return TRUE if at least one of user accession or system accession exists and start with accession rule.
 
         once filtered, add the row_data to the sheet_data.
 
@@ -527,21 +571,15 @@ class SheetData:
             row_data.schema["accession"] = ''
         system_accession = row_data.schema["accession"]
         valid = 0
-        if isupdate:
-            if user_accession.startswith(user_accession_rule) and system_accession.startswith(system_accession_rule):
-                valid = 1
-            elif user_accession.startswith(user_accession_rule) and system_accession == "":
-                valid = 1
-            elif user_accession == "" and system_accession.startswith(system_accession_rule):
-                valid = 1
-            else:
-                logging.warning("All records in %s without a valid system accession or user accession will be skipped during update!" % sheet_name)
-
+        if user_accession.startswith(user_accession_rule) and system_accession.startswith(system_accession_rule):
+            valid = 1
+        elif user_accession.startswith(user_accession_rule) and system_accession == "":
+            valid = 1
+        elif user_accession == "" and system_accession.startswith(system_accession_rule):
+            valid = 1
         else:
-            if user_accession.startswith(user_accession_rule) and system_accession == "":
-                valid = 1
-            else:
-                logging.warning("skip row %s %s in %s! It should not have system_accession and the user accession must follow the accession rule %s!" % (sheet_name, system_accession, user_accession, user_accession_rule))
+            logging.warning("record %s %s in %s is not valid and will be skipped!" % (system_accession, user_accession, sheet_name))
+
         if valid:
             self.add_record(row_data)
 
@@ -732,20 +770,14 @@ def main():
         poster.duplication_check(sheet_data)
         # Now upload all the records on sheet_data:
         for record in sheet_data.all_records:
-            response = poster.submit_record(record)  # submit the record, and assign system accession to the record.
-            if response['statusCode'] != 200:
-                logging.error("post request failed!")
-            if not args.isupdate:
-                accession = response["accession"]
-                record.schema['accession'] = accession
-                book_data.save_submission(sheet, accession)
+            poster.submit_record(record)  # submit/update the record, track which record has been submitted or updateed, and assign system accession to the submitted record.
         book_data.add_sheet(sheet_data)
 
     book_data.swipe_accession()
-    poster.save_submission(book_data)
     for sheet_name, sheet_data in book_data.data.items():
         for record in sheet_data.all_records:
             poster.link_record(record)
+    poster.save_submission(book_data)
 
 
 if __name__ == '__main__':
