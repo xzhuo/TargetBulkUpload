@@ -290,7 +290,7 @@ class SheetReader:
                 # islink = SheetData.islink(column_header)
                 cell_obj = sheet_obj.cell(row_index, col_index)  # the cell obj from xlrd
                 row_data.validate_add(column_header, cell_obj, datemode)
-            sheet_data.filter_add(row_data, isupdate)
+            sheet_data.filter_add(row_data)
         return sheet_data
 
 
@@ -319,7 +319,7 @@ class Poster:
     def fetch_record(self, sheet_name, system_accession):
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         get_url = meta_url + '/api/' + categories + '/' + system_accession
-        main_obj = requests.get(get_url).json()["mainObj"][category]
+        main_obj = requests.get(get_url).json()["mainObj"]
         record = RowData(sheet_name, self.meta_structure)
         record.schema = main_obj[category]
         record.relationships = main_obj["added"]
@@ -357,38 +357,46 @@ class Poster:
         sheet_name = row_data.sheet_name
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         submit_url = self.submit_url
-
-        accession = row_data.remove("accession")  # it is essentially a dict pop.
+        accession = row_data.schema["accession"]
         user_accession = row_data.schema["user_accession"]
+        valid = 0
         # for update, accession must exists, so it goes to else. for submit, accession must be "".
         if isupdate and accession != "":
             post_url = meta_url + '/api/' + categories + '/' + accession
+            valid = 1
         elif (not isupdate) and accession == "":
             if not notest:
                 row_data.replace_accession()  # replace user accession with new random string, and save old accssion.
             post_url = meta_url + '/api/' + categories
+            valid = 1
         else:
             logging.info("skip record %s %s in %s." %(accession, user_accession, sheet_name))
-            break
-            continue?
-        post_body = row_data.schema
-        response = requests.post(post_url, headers=self.token_header, data=post_body).json()
 
-        if response['statusCode'] == 200:
-            # save the submission:
-            if "accession" in response:
-                record.schema['accession'] = response["accession"]
-                record.submission("submitted")
+        if valid:
+            post_body = row_data.schema
+            accession = row_data.remove("accession")  # it is essentially a dict pop.
+            response = requests.post(post_url, headers=self.token_header, data=post_body).json()
+
+            if response['statusCode'] == 200:
+                # save the submission:
+                if "accession" in response:
+                    row_data.schema['accession'] = response["accession"]
+                    row_data.submission("submitted")
+                    print("successfully submitted record %s in %s to database as %s." %(user_accession, sheet_name, row_data.schema['accession']))
+                else:
+                    row_data.schema["accession"] = accession
+                    row_data.submission("updated")
+                    print("successfully updated record %s %s in %s." %(accession, user_accession, sheet_name))
             else:
-                record.submission("updated")
-        else:
-            # should I sys.exit it, or just a warning with failed submission?
-            sys.exit("post request of %s %s in %s failed!" %(accession, user_accession, sheet_name))
+                # should I sys.exit it, or just a warning with failed submission?
+                sys.exit("post request of %s %s in %s failed!" %(accession, user_accession, sheet_name))
 
     def link_record(self, row_data):
+        sheet_name = row_data.sheet_name
+        system_accession = row_data.schema["accession"]
         if row_data.submission() == "updated":
             # fetch existing record:
-            existing_record = fetch_record(sheet_name, system_accession)
+            existing_record = self.fetch_record(sheet_name, system_accession)
             self.update_link(existing_record, row_data)
         if row_data.submission() == "submitted":
             self.submit_link(row_data)
@@ -414,7 +422,7 @@ class Poster:
                 for linkto_accession in to_add:
                     self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
 
-    def submit_link(self, row_data)
+    def submit_link(self, row_data):
         sheet_name = row_data.sheet_name
         system_accession = row_data.schema["accession"]
         for column_name in row_data.relationships:
@@ -430,8 +438,12 @@ class Poster:
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
         link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
-        response = requests.post(linkurl, headers=self.token, data=link_body)
-        return response.json()
+        response = requests.post(linkurl, headers=self.token_header, data=link_body).json()
+        if response["statusCode"] == 200:
+            print("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+        else:
+            print("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+            print(response["message"])
 
     def save_submission(self, book_data):
         isupdate = self.isupdate
@@ -448,7 +460,7 @@ class Poster:
         saved_submission_url = self.submit_url + "/api/submission"
         if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
             submission_body = {"details": json.dumps(submission_log), "update": isupdate}
-            submitted_response = requests.post(saved_submission_url, headers=self.token, data=submission_body).json()
+            submitted_response = requests.post(saved_submission_url, headers=self.token_header, data=submission_body).json()
             if submitted_response["statusCode"] == 201:
                 logging.info("Submission has been successfully saved as %s!" % submitted_response["submission_id"])
             else:
@@ -503,7 +515,7 @@ class Poster:
                     matching_user_accession = [k for k,v in existing_user_system_accession_pair.items() if v == accession][0]
                     user_accession_list.append(matching_user_accession)
                     system_accession_list.append(accession)
-            else  # user_accession != "" and accession == ""
+            else:  # user_accession != "" and accession == ""
                 if user_accession in user_accession_list:
                     sys.exit("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
                 elif user_accession in existing_user_accessions:
@@ -512,12 +524,6 @@ class Poster:
                     system_accession_list.append(matching_accession)
                 else:
                     user_accession_list.append(user_accession)
-
-
-            else:  # for submission, all the rows are already filtered. All of them have valid user accession, and all the rows with system accession == ''.
-                if not notest:
-                    user_accession_list.append(user_accession)
-                    record.replace_accession()
 
 
 class BookData:
@@ -549,8 +555,9 @@ class BookData:
                 user_accession = record.schema['user_accession']
                 system_accession = record.schema['accession']
                 accession_table.update({user_accession: system_accession})
-                if record.old_accession:
-                    accession_table.update({record.old_accession: system_accession})
+                old_accession = record.old_accession()
+                if old_accession != "":
+                    accession_table.update({old_accession: system_accession})
 
         for sheet in self.data:
             sheet_data = self.data[sheet]
@@ -644,6 +651,15 @@ class RowData:
         else:
             sys.exit("remove method can only delete schema columns, but you are trying to delete %s in %s" % (column_name, self.sheet_name))
 
+    def old_accession(self, old_accession=""):
+        # redundant, but seems it is bad idea to make mutable attribes.
+        if old_accession == "":
+            if "exist_old_accession" in vars(self):
+                old_accession = self.exist_old_accession
+            return old_accession
+        else:
+            self.exist_old_accession = old_accession
+
     def submission(self, submission=""):
         """
         submission should be "submitted" or "updated"
@@ -651,11 +667,11 @@ class RowData:
         without param, returns current submission.
         """
         if submission == "":
-            if self.submission:
-                submission = self.submission
+            if "exist_submission" in vars(self):
+                submission = self.exist_submission
             return submission
         else:
-            self.submission = submission
+            self.exist_submission = submission
 
     def replace_accession(self, new_user_accession=""):
         sheet_name = self.sheet_name
@@ -664,7 +680,7 @@ class RowData:
         if new_user_accession == "":
             randomid = uuid.uuid1()
             new_user_accession = user_accession_rule + str(randomid)
-        self.old_accession = self.schema["user_accession"]
+        self.old_accession(self.schema["user_accession"])
         self.schema["user_accession"] = new_user_accession
 
     def validate_add(self, column_header, cell_obj, datemode):
