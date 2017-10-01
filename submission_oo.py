@@ -365,7 +365,7 @@ class Poster:
             post_url = meta_url + '/api/' + categories + '/' + accession
         elif (not isupdate) and accession == "":
             if not notest:
-                row_data.replace_accession()
+                row_data.replace_accession()  # replace user accession with new random string, and save old accssion.
             post_url = meta_url + '/api/' + categories
         else:
             logging.info("skip record %s %s in %s." %(accession, user_accession, sheet_name))
@@ -374,28 +374,54 @@ class Poster:
         post_body = row_data.schema
         response = requests.post(post_url, headers=self.token_header, data=post_body).json()
 
-        if response['statusCode'] != 200:
-            sys.exit("post request of %s %s in %s failed!" %(accession, user_accession, sheet_name))
-        # save the submission:
-        if "accession" in response:
-            accession = response["accession"]
-            record.schema['accession'] = accession
-            record.submission = "submit"
+        if response['statusCode'] == 200:
+            # save the submission:
+            if "accession" in response:
+                record.schema['accession'] = response["accession"]
+                record.submission("submitted")
+            else:
+                record.submission("updated")
         else:
-            record.submission = "update"
+            # should I sys.exit it, or just a warning with failed submission?
+            sys.exit("post request of %s %s in %s failed!" %(accession, user_accession, sheet_name))
 
     def link_record(self, row_data):
-        if row_data.submission == "update":
-            fetch existing record
-            remove link in existing record
-        if row_data.submission == "submit" or row_data.submission == "update":
-            sheet_name = row_data.sheet_name
-            system_accession = row_data.schema["accession"]
-            for column_name in row_data.relationships:
-                for linkto_category in row_data.relationships[column_name]:
-                    accession_list = row_data.relationships[column_name][linkto_category]
-                    for linkto_accession in accession_list:
-                        self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
+        if row_data.submission() == "updated":
+            # fetch existing record:
+            existing_record = fetch_record(sheet_name, system_accession)
+            self.update_link(existing_record, row_data)
+        if row_data.submission() == "submitted":
+            self.submit_link(row_data)
+
+    def update_link(self, existing_record, row_data):
+        """
+        update the link if the link is different between existing_record and row_data
+        """
+        sheet_name = row_data.sheet_name
+        system_accession = row_data.schema["accession"]
+        for column_name in row_data.relationships:
+            for linkto_category in row_data.relationships[column_name]:
+                new_accession_set = set(row_data.relationships[column_name][linkto_category])
+                try:
+                    existing_accession_set = set(existing_record.relationships[column_name][linkto_category])
+                except:
+                    print("unable to update different kinds of records %s in %s!" %(system_accession, sheet_name))
+                # only change accession difference.
+                to_remove = new_accession_set - existing_accession_set
+                to_add = existing_accession_set - new_accession_set
+                for linkto_accession in to_remove:
+                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "remove")
+                for linkto_accession in to_add:
+                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
+
+    def submit_link(self, row_data)
+        sheet_name = row_data.sheet_name
+        system_accession = row_data.schema["accession"]
+        for column_name in row_data.relationships:
+            for linkto_category in row_data.relationships[column_name]:
+                accession_list = row_data.relationships[column_name][linkto_category]
+                for linkto_accession in accession_list:
+                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
 
     def link_change(self, sheet_name, system_accession, linkto_category, linkto_accession, connection_name, direction):
         """
@@ -411,10 +437,10 @@ class Poster:
         isupdate = self.isupdate
         submission_log = dict()
         for sheet_name, sheet_data in book_data.data.items():
-            category = get_category(sheet_name)
+            category = self.meta_structure.get_category(sheet_name)
             accession_list = []
             for record in sheet_data.all_records:
-                if record.submission == isupdate:
+                if (isupdate and record.submission() == "updated") or ((not isupdate) and record.submission() == "submitted"):
                     accession_list.append(record.schema["accession"])
             if len(accession_list) > 0:
                 submission_log[category] = accession_list
@@ -618,6 +644,19 @@ class RowData:
         else:
             sys.exit("remove method can only delete schema columns, but you are trying to delete %s in %s" % (column_name, self.sheet_name))
 
+    def submission(self, submission=""):
+        """
+        submission should be "submitted" or "updated"
+        with param, set the submission;
+        without param, returns current submission.
+        """
+        if submission == "":
+            if self.submission:
+                submission = self.submission
+            return submission
+        else:
+            self.submission = submission
+
     def replace_accession(self, new_user_accession=""):
         sheet_name = self.sheet_name
         meta_structure = self.meta_structure
@@ -713,7 +752,7 @@ def get_args():
         '-u',
         action="store_true",
         dest="isupdate",
-        help="Run mode. Without the flag (default), only records without systerm accession and without \
+        help="Run mode. Without the flag (default), only records without system accession and without \
         matching user accession with be posted to the database. All the records with system accession in the \
         excel with be ignored. For records without system accession but have user accessions, the user accession \
         will be compared with all records in the database. If a matching user accession found in the database, the \
@@ -770,13 +809,13 @@ def main():
         poster.duplication_check(sheet_data)
         # Now upload all the records on sheet_data:
         for record in sheet_data.all_records:
-            poster.submit_record(record)  # submit/update the record, track which record has been submitted or updateed, and assign system accession to the submitted record.
+            poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
         book_data.add_sheet(sheet_data)
 
     book_data.swipe_accession()
     for sheet_name, sheet_data in book_data.data.items():
         for record in sheet_data.all_records:
-            poster.link_record(record)
+            poster.link_record(record)  # submit/update the record link.
     poster.save_submission(book_data)
 
 
