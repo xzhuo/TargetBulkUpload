@@ -233,9 +233,8 @@ class MetaStructure:
 
 
 class SheetReader:
-    def __init__(self, meta_structure, excel_header_row, excel_data_start_row, isupdate):
+    def __init__(self, meta_structure, excel_header_row, excel_data_start_row):
         self.meta_structure = meta_structure
-        self.isupdate = isupdate
         self.excel_header_row = excel_header_row
         self.excel_data_start_row = excel_data_start_row
 
@@ -277,7 +276,6 @@ class SheetReader:
         :param: datemode - The workbook.datemode got from xlrd workbook class.
         returns a fully validated SheetData object.
         """
-        isupdate = self.isupdate
         column_headers = self.get_sheet_headers(sheet_obj)
         sheet_data = SheetData(sheet_obj.name, self.meta_structure)
         for row_index in range(self.excel_data_start_row, sheet_obj.nrows):
@@ -412,7 +410,7 @@ class Poster:
                 try:
                     existing_accession_set = set(existing_record.relationships[column_name][linkto_category])
                 except:
-                    print("unable to update different kinds of records %s in %s!" %(system_accession, sheet_name))
+                    print("unable to update different kinds of records %s in %s!" % (system_accession, sheet_name))
                 # only change accession difference.
                 to_remove = new_accession_set - existing_accession_set
                 to_add = existing_accession_set - new_accession_set
@@ -812,7 +810,7 @@ def main():
     # meta_structure.notest(args.notest)
     # These options no longer saved in meta_structure
 
-    reader = SheetReader(meta_structure, EXCEL_HEADER_ROW, EXCEL_DATA_START_ROW, args.isupdate)
+    reader = SheetReader(meta_structure, EXCEL_HEADER_ROW, EXCEL_DATA_START_ROW)
     poster = Poster(args.token, action_url_meta, action_url_submit, args.isupdate, args.notest, meta_structure)
 
     workbook = xlrd.open_workbook(args.excel)
