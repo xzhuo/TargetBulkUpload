@@ -47,7 +47,8 @@ ALL_CATEGORIES = {"assay": "Assay",
 class MetaStructure:
     def __init__(self, url, categories, schema_string, relationship_string, version_string):
         """
-        Set up metastructure:
+        Set up metastructure.
+
         :param: url - it is the meta_url used for submission.
         :param: categories - it is the ALLCATEGORIES dictionary. the key is category, the value is sheet_name.
         :schema_string: - it is the the schema string part of the url.
@@ -174,7 +175,6 @@ class MetaStructure:
     def get_all_column_headers(self, sheet_name):
         return self.get_schema_column_headers(sheet_name) + self.get_link_column_headers(sheet_name)
 
-
     def get_data_type(self, sheet_name, column_header):
         """
         :param: sheet_name - the sheet name! what the fuck do you expect?!
@@ -252,7 +252,7 @@ class SheetReader:
 
     def verify_column_names(self, sheet_obj):
         """
-        compare all the columns names in the worksheet with correspondence databases fields.
+        Compare all the columns names in the worksheet with correspondence databases fields.
         pop up a warning if there is any missing column.
         and also give a warning if any column will be skipped.
         """
@@ -356,7 +356,6 @@ class Poster:
         notest = self.notest
         sheet_name = row_data.sheet_name
         meta_url, category, categories = self.get_sheet_info(sheet_name)
-        submit_url = self.submit_url
         accession = row_data.schema["accession"]
         user_accession = row_data.schema["user_accession"]
         valid = 0
@@ -403,7 +402,7 @@ class Poster:
 
     def update_link(self, existing_record, row_data):
         """
-        update the link if the link is different between existing_record and row_data
+        Update the link if the link is different between existing_record and row_data.
         """
         sheet_name = row_data.sheet_name
         system_accession = row_data.schema["accession"]
@@ -468,10 +467,11 @@ class Poster:
 
     def duplication_check(self, sheet_data):
         """
-        each record has been validated by themselves.
+        Make sure all the system accessions and user accessions are unique in the sheet.
+
+        In the input sheet_data, each record has been validated.
         At least one of user or system accession exists, the other one must be "" if don't exists.
 
-        Make sure all the system accessions and user accessions are unique in the sheet.
         If the record exists in the database, make sure both system and user accession match the record in the database.
         If there is only one accession in the sheet record, fetch and fill in the other accession from database.
         
@@ -587,10 +587,9 @@ class SheetData:
     def filter_add(self, row_data):
         """
         1. For records without user accession or system accession, assign "" to the field.
-        2. Fileter TRUE or FALSE based on user accession and system accession of the record.
-        Return TRUE if at least one of user accession or system accession exists and start with accession rule.
-
-        once filtered, add the row_data to the sheet_data.
+        2. Only add the row_data to self if:
+        Both user accession and system accession follow the accession rule;
+        One of them follows the accession rule, and the other is "".
 
         """
         sheet_name = self.name
@@ -644,7 +643,7 @@ class RowData:
 
     def remove(self, column_name):
         """
-        It's input is a column_name, instead of a column_header! And it only works for column names in schema. I use it only to delete accession columns
+        It's input is a column_name, instead of a column_header! And it only works for column names in schema. I use it only to delete accession columns.
         """
         if column_name in self.schema:
             return self.schema.pop(column_name)
@@ -652,7 +651,7 @@ class RowData:
             sys.exit("remove method can only delete schema columns, but you are trying to delete %s in %s" % (column_name, self.sheet_name))
 
     def old_accession(self, old_accession=""):
-        # redundant, but seems it is bad idea to make mutable attribes.
+        # redundant with submission, but seems it is bad idea to make mutable attribes.
         if old_accession == "":
             if "exist_old_accession" in vars(self):
                 old_accession = self.exist_old_accession
