@@ -55,7 +55,7 @@ class MetaStructure:
         :version_string: it is the version string parl of the url
         :return:
 
-        :atribiutes: url - the meta_url
+        :attributes: url - the meta_url
         :categories: the category-sheet_name dictionary.
         :version: the version of current system, retrived from a get request.
         :schema_dict: the dictionary with all the schema structure. Each schema_dict[sheet_name] is a list of dictionary.
@@ -652,13 +652,14 @@ class RowData:
             sys.exit("remove method can only delete schema columns, but you are trying to delete %s in %s" % (column_name, self.sheet_name))
 
     def old_accession(self, old_accession=""):
-        # redundant, but seems it is bad idea to make mutable attribes.
+        # redundant, but seems it is bad idea to make mutable attributes.
         if old_accession == "":
-            if "exist_old_accession" in vars(self):
-                old_accession = self.exist_old_accession
-            return old_accession
+            try:
+                return self.the_old_accession
+            except:
+                return ""
         else:
-            self.exist_old_accession = old_accession
+            self.the_old_accession = old_accession
 
     def submission(self, submission=""):
         """
@@ -666,12 +667,14 @@ class RowData:
         with param, set the submission;
         without param, returns current submission.
         """
+
         if submission == "":
-            if "exist_submission" in vars(self):
-                submission = self.exist_submission
-            return submission
+            try:
+                return self.the_submission
+            except:
+                return ""
         else:
-            self.exist_submission = submission
+            self.the_submission = submission
 
     def replace_accession(self, new_user_accession=""):
         sheet_name = self.sheet_name
