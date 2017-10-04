@@ -21,6 +21,7 @@ RELATIONSHIP_STRING = '/schema/relationships/'
 VERSION_STRING = '/api/version'
 NUMBER_ZEROS = 3
 
+TIMEOUT = 10  # the max time (seconds) allowed for each API call. TODO: implementation timeout in requests.
 # The ctype represents in xlrd package parsering excel file:
 CTYPE_NUMBER = 2
 CTYPE_DATE = 3
