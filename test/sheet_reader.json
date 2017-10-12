@@ -1,0 +1,134 @@
+[
+  {
+    "relationships": {
+      "dam": {
+        "mouse": [
+          "NA"
+        ]
+      },
+      "part_of": {
+        "bioproject": [
+          ""
+        ]
+      },
+      "sire": {
+        "mouse": [
+          ""
+        ]
+      }
+    },
+    "schema": {
+      "accession": "TRGTLTR0001",
+      "comments": "",
+      "dam_weight_mating": 19.92,
+      "dam_weight_preexposure": "NA",
+      "dam_weight_weaning": 26.41,
+      "date_born": "2016-09-21",
+      "litter_number": 1.0,
+      "litter_size_survived": 8.0,
+      "litter_size_total": 8.0,
+      "male_female_ratio": 4.5,
+      "user_accession": "USRLTR0001"
+    },
+    "sheet_name": "Litter"
+  },
+  {
+    "relationships": {
+      "dam": {
+        "mouse": [
+          "NA"
+        ]
+      },
+      "part_of": {
+        "bioproject": [
+          "NA"
+        ]
+      },
+      "sire": {
+        "mouse": [
+          ""
+        ]
+      }
+    },
+    "schema": {
+      "accession": "",
+      "comments": "",
+      "dam_weight_mating": "NA",
+      "dam_weight_preexposure": 18.45,
+      "dam_weight_weaning": 26.41,
+      "date_born": "2016-09-21",
+      "litter_number": 1.0,
+      "litter_size_survived": 7.2,
+      "litter_size_total": 7.5,
+      "male_female_ratio": "NA",
+      "user_accession": "USRLTR0002"
+    },
+    "sheet_name": "Litter"
+  },
+  {
+    "relationships": {
+      "dam": {
+        "mouse": [
+          ""
+        ]
+      },
+      "part_of": {
+        "bioproject": [
+          ""
+        ]
+      },
+      "sire": {
+        "mouse": [
+          ""
+        ]
+      }
+    },
+    "schema": {
+      "accession": "TRGTLTR0002",
+      "comments": "",
+      "dam_weight_mating": 19.92,
+      "dam_weight_preexposure": 118.6,
+      "dam_weight_weaning": "NA",
+      "date_born": "1970-01-01",
+      "litter_number": 0.5,
+      "litter_size_survived": 10.0,
+      "litter_size_total": 111.0,
+      "male_female_ratio": 4.5,
+      "user_accession": ""
+    },
+    "sheet_name": "Litter"
+  },
+  {
+    "relationships": {
+      "dam": {
+        "mouse": [
+          ""
+        ]
+      },
+      "part_of": {
+        "bioproject": [
+          ""
+        ]
+      },
+      "sire": {
+        "mouse": [
+          ""
+        ]
+      }
+    },
+    "schema": {
+      "accession": "",
+      "comments": "a separate test, also test ctype true or false",
+      "dam_weight_mating": "20.90",
+      "dam_weight_preexposure": "",
+      "dam_weight_weaning": "",
+      "date_born": "1970-01-01",
+      "litter_number": -1,
+      "litter_size_survived": 12.0,
+      "litter_size_total": 11.01,
+      "male_female_ratio": "NA",
+      "user_accession": "USRLTR0003"
+    },
+    "sheet_name": "Litter"
+  }
+]

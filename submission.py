@@ -22,7 +22,7 @@ uploader_to_use = Uploader()
 def change_uploader(new_uploader):
     uploader_to_use = new_uploader
 
-
+'''
 ######
 
 import submission.py as submission
@@ -37,6 +37,7 @@ submission.main()
 assert(fake.the_json_that_I_didnt_send).equals({})
 
 #####
+'''
 total_tabs = {"assay": "Assay",
               "bioproject": "Bioproject",
               "biosample": "Biosample",
@@ -52,7 +53,7 @@ total_tabs = {"assay": "Assay",
               "mergedFile": "Mergedfile"
               }
 
-
+'''
 class SheetReader:
     def __init__(self, schema_source):
         self.schema_source = schema_source
@@ -93,7 +94,7 @@ def upload_example():
         sheet_data = reader.read_sheet(sheet)
         uploader.upload(sheet_data)
 
-
+'''
 def get_args():
     parser = argparse.ArgumentParser()
 
@@ -207,12 +208,14 @@ def main():
     # make sure there is no redundant user accession in the submission. Add the system accession if a record exists in the database.
     accession_check(args.notest, submission, action_url_meta, SheetToTable, args.mode, user_name, acc_name)
     logging.debug(json.dumps(submission, indent=4, sort_keys=True))
+    upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
 
-
+    '''
     ###############
     uploader_to_use.upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
 
     #upload(args.testlink, args.notest, submission, relationship_connectto, SheetToTable, action_url_meta, action_url_submit, user_name, bearer_token, args.mode, acc_name)
+    '''
     if args.notest or args.mode:
         print("If you did not find errors above, all the records were successfully uploaded/updated to TaRGET metadata database!")
     else:

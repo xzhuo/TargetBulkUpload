@@ -10,6 +10,7 @@ import logging
 import uuid  # used to generate unique user accesion if it is not provided.
 import pprint
 from socket import timeout
+import unittest
 import ipdb
 
 URL_META = 'http://target.wustl.edu:7006'
@@ -52,9 +53,9 @@ class MetaStructure:
 
         :param: url - it is the meta_url used for submission.
         :param: categories - it is the ALLCATEGORIES dictionary. the key is category, the value is sheet_name.
-        :schema_string: - it is the the schema string part of the url.
-        :relationship_string: - it is the relationship string part of the url.
-        :version_string: it is the version string parl of the url
+        :param: schema_string: - it is the the schema string part of the url.
+        :param: relationship_string: - it is the relationship string part of the url.
+        :param: version_string: it is the version string parl of the url
         :return:
 
         :attributes: url - the meta_url
@@ -119,14 +120,19 @@ class MetaStructure:
         self.schema_dict = self._url_to_json(schema_string)
         self.link_dict = self._url_to_json(relationship_string)
         self.version = self._set_version(version_string)
+
+        # Add system accession to the schema dictionary:
         for category in self.schema_dict:
             self.schema_dict[category].append({"name": "accession", "text": "System Accession", "type": "text"})
 
     def get_sheet_url(self, sheet_name):
+        """Return a url of the provided sheet name."""
         pass
 
     def get_category(self, sheet_name):
         """
+        Return the category name (file) of the provided sheet name (File).
+
         :param: sheet_name - the excel worksheet name.
         :return: the category name.
         """
@@ -134,19 +140,25 @@ class MetaStructure:
 
     def get_categories(self, sheet_name):
         """
+        Return the categories (files) of the provided sheet name (File).
+
         :param: sheet_name - the sheet_name in excel file
         :return: the name of "categories"
         """
         return self.link_dict[sheet_name]["all"]
 
     def get_sheet_schema(self, sheet_name):
+        """Return the sheet schema (a list of dictionary, structure example: http://target.wustl.edu:8006/schema/file.json)."""
         return self.schema_dict[sheet_name]  # schema is a list
 
     def get_sheet_link(self, sheet_name):
+        """Return the sheet link (a dictionary, structure example: http://target.wustl.edu:8006/schema/relationships/file.json)."""
         return self.link_dict[sheet_name]  # link is a dictionary, link["connections"] is a list.
 
     def get_user_accession_rule(self, sheet_name):
         """
+        Return the acceptable user accession rule of metadata database given a sheet name.
+
         :param: sheet_name - the excel sheet name
         :return: the user accession rule prefix for the sheet.
         """
@@ -159,6 +171,8 @@ class MetaStructure:
 
     def get_system_accession_rule(self, sheet_name):
         """
+        Return the acceptable system accession rule of metadata database given a sheet name.
+
         :param: sheet_name - the excel sheet name
         :return: the system accession rule prefix for the sheet.
         """
@@ -166,18 +180,23 @@ class MetaStructure:
         return link["prefix"][:-NUMBER_ZEROS]
 
     def get_schema_column_headers(self, sheet_name):  # get a list of all column display names, including "System Accession"
+        """Return a list of all column display names except relationship columns. Because of L123-125, "System Accession" is also in the list."""
         schema = self.get_sheet_schema(sheet_name)
         return [x["text"] for x in schema]
 
     def get_link_column_headers(self, sheet_name):  # get a list of all column display names
+        """Return a list of all relationship column display names."""
         link = self.get_sheet_link(sheet_name)
         return [x["display_name"] for x in link["connections"]]
 
     def get_all_column_headers(self, sheet_name):
+        """Return a list of all column display names. Because of L123-125, "System Accession" is also in the list."""
         return self.get_schema_column_headers(sheet_name) + self.get_link_column_headers(sheet_name)
 
     def get_data_type(self, sheet_name, column_header):
         """
+        Given a excel sheet name and a column display name (column header), return the expected data type of that column in the database.
+
         :param: sheet_name - the sheet name! what the fuck do you expect?!
         :param: column_header - the column header shown in the excel file.
         :return: the data type of that column, for relationship it is always a "text"
@@ -185,13 +204,13 @@ class MetaStructure:
         return self._get_column_info(sheet_name, column_header, "type")
 
     def get_column_name(self, sheet_name, column_header):
-        """
-        get column_name in database using column header in excel.
-        """
+        """Get the field name (column_name) in database using column header in excel."""
         return self._get_column_info(sheet_name, column_header, "name")
 
     def get_linkto(self, sheet_name, column_header):
         """
+        Given a excel sheet name and relationship column display name (column_header), returns which sheet that relationship links to.
+
         :param: sheet_name
         :param: column_header
         :return: another sheet_name the columna_header in sheet_name linked to.
@@ -204,6 +223,7 @@ class MetaStructure:
             sys.exit("%s in %s is not a connection column" % (column_header, sheet_name))
 
     def _url_to_json(self, string):
+        """Fetch the data from a url and get a dictionary or a list."""
         new_dict = {}
         for category, sheet_name in self.categories.items():
             json_url = self.url + string + category + '.json'
@@ -212,11 +232,16 @@ class MetaStructure:
         return new_dict
 
     def _set_version(self, version_string):
+        """ Giver a version string (part of the url), returns the latested database structure version."""
         full_url = self.url + version_string
         return requests.get(full_url).json()
 
     def _get_column_info(self, sheet_name, column_header, info):
         """
+        Given a excel sheet name and a column displayname (column_header), returns desired infomation.
+
+        if info == "name", returns the database field name (column_name).
+        if info == "type", returns the column"s data type. if it is a relationship column, returns "text" always.
         info is either "type" or "name"
         """
         if column_header in self.get_schema_column_headers(sheet_name):
@@ -242,6 +267,7 @@ class SheetReader:
     def get_sheet_headers(self, sheet_obj):
         """
         Get all the columan headers from worksheet.
+
         Note the difference between SheetReader.get_sheet_headers and MetaStructure.get_all_column_headers.
         The former get the headers from the file, while the later get the headers from metadata database structure + system accession.
         :param: sheet_obj - the sheet obj from xlrd package.
@@ -253,8 +279,9 @@ class SheetReader:
     def verify_column_names(self, sheet_obj):
         """
         Compare all the columns names in the worksheet with correspondence databases fields.
-        pop up a warning if there is any missing column.
-        and also give a warning if any column will be skipped.
+
+        Pops up a warning if there is any database field missing in the worksheet.
+        Also gives a warning if any column in the worksheet will be skipped because it does not match a field in the database.
         """
         sheet_name = sheet_obj.name
         column_headers_from_sheet = set(self.get_sheet_headers(sheet_obj))
@@ -271,7 +298,7 @@ class SheetReader:
             for column_header in unknown_columns:
                 logging.warning("warning! The database does not know what is column %s in %s. Please update your excel file to the latest version." % (column_header, sheet_name))
 
-    def read_sheet(self, sheet_obj, datemode):  # read excel file.
+    def read_sheet(self, sheet_obj, datemode):  # read excel file. I need to test this function.
         """
         :param: sheet_obj - The xlrd sheet object.
         :param: datemode - The workbook.datemode got from xlrd workbook class.
@@ -378,9 +405,9 @@ class Poster:
             if response['statusCode'] == 200:
                 # save the submission:
                 if "accession" in response:
-                    row_data.schema['accession'] = response["accession"]
+                    row_data.schema["accession"] = response["accession"]
                     row_data.submission("submitted")
-                    print("successfully submitted record %s in %s to database as %s." %(user_accession, sheet_name, row_data.schema['accession']))
+                    print("successfully submitted record %s in %s to database as %s." %(user_accession, sheet_name, row_data.schema["accession"]))
                 else:
                     row_data.schema["accession"] = accession
                     row_data.submission("updated")
@@ -473,7 +500,7 @@ class Poster:
 
         If the record exists in the database, make sure both system and user accession match the record in the database.
         If there is only one accession in the sheet record, fetch and fill in the other accession from database.
-        
+
         In the end, for records exist in database, both system and user accession must exist in the record;
         fo new records, only user accession in the record, system accession is ""
         """
@@ -491,8 +518,8 @@ class Poster:
             accession = record.schema["accession"]
             user_accession = record.schema["user_accession"]
             """
-            three possibilities: 
-            both user and system accession exist; 
+            three possibilities:
+            both user and system accession exist;
             system accession exists but user accession is "";
             system accession is "" but user accession exists.
             """
@@ -511,7 +538,7 @@ class Poster:
                 elif accession not in existing_system_accessions:
                     sys.exit("System accession %s in %s in invalid. It does not exist in the database." % (accession, sheet_name))
                 else:
-                    matching_user_accession = [k for k,v in existing_user_system_accession_pair.items() if v == accession][0]
+                    matching_user_accession = [k for k, v in existing_user_system_accession_pair.items() if v == accession][0]
                     user_accession_list.append(matching_user_accession)
                     system_accession_list.append(accession)
             else:  # user_accession != "" and accession == ""
@@ -551,8 +578,8 @@ class BookData:
             sheet_data = self.data[sheet]
             all_records = sheet_data.all_records
             for record in all_records:
-                user_accession = record.schema['user_accession']
-                system_accession = record.schema['accession']
+                user_accession = record.schema["user_accession"]
+                system_accession = record.schema["accession"]
                 accession_table.update({user_accession: system_accession})
                 old_accession = record.old_accession()
                 if old_accession != "":
@@ -600,10 +627,10 @@ class SheetData:
         system_accession_rule = self.meta_structure.get_system_accession_rule(sheet_name)
 
         if "user_accession" not in row_data.schema:
-            row_data.schema["user_accession"] = ''
+            row_data.schema["user_accession"] = ""
         user_accession = row_data.schema["user_accession"]
         if "accession" not in row_data.schema:
-            row_data.schema["accession"] = ''
+            row_data.schema["accession"] = ""
         system_accession = row_data.schema["accession"]
         valid = 0
         if user_accession.startswith(user_accession_rule) and system_accession.startswith(system_accession_rule):
@@ -703,11 +730,11 @@ class RowData:
         ctype = cell_obj.ctype
         data_type = self.meta_structure.get_data_type(self.sheet_name, column_header)
         # Now begin validation:
-
-        if column_header == "User accession" and (value == "NA" or value == ''):  # always us "" if user accession is empty or NA
-            value == ""
-        elif column_header == "System Accession" and (value == "NA" or value == ''):  # always us "" if sys accession is empty or NA
-            value == ""
+        # ipdb.set_trace()
+        if column_header == "User accession" and (value == "NA" or value == ""):  # always us "" if user accession is empty or NA
+            value = ""
+        elif column_header == "System Accession" and (value == "NA" or value == ""):  # always us "" if sys accession is empty or NA
+            value = ""
         elif ctype == CTYPE_BOOLEAN:
             if value:
                 value = "TRUE"
@@ -717,18 +744,22 @@ class RowData:
         elif data_type == "text" and ctype == CTYPE_NUMBER:
             value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
         elif data_type == "date":
-            if value == "NA":
+            if value == "NA" or value == "":
                 value = '1970-01-01'
             elif ctype == CTYPE_DATE:
                 value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
-        elif data_type == "float":
+        elif data_type == "number":
             if ctype == CTYPE_NUMBER:
                 value = round(value, 2)
+            elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
+                value = -1
+                logging.info("Change NA to -1 for %s in %s." % (column_header, self.sheet_name))
             else:
                 sys.exit("please use number for %s in %s" % (column_header, self.sheet_name))
-        elif data_type == "number" and value == 'NA':  # assign number field to -1 if it is NA in the excel.
-            value = -1
-            logging.info("Change NA to -1 for %s in %s." % (column_header, self.sheet_name))
+        elif data_type == "textnumber":
+            if ctype == CTYPE_NUMBER:
+                value = round(value, 2)
+
         self.add(column_header, value)  # or use columan display name?
 
 
@@ -741,24 +772,24 @@ def get_args():
         action="store",
         dest="excel",
         required=True,
-        help='The excel used for bulk upload. Required.\n',
+        help="The excel used for bulk upload. Required.\n",
     )
     parser.add_argument(
         '--notest',
         '-n',
         action="store_true",
         dest="notest",
-        help='test flag. default option is true, which will submit all the metadata to the test database. \
+        help="test flag. default option is true, which will submit all the metadata to the test database. \
         The metadata only goes to the production database if this option is false. Our recommended practice is use \
         TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
-        metadata successfully submitted to test database.\n',
+        metadata successfully submitted to test database.\n",
     )
     parser.add_argument(
         '--testlink',
         '-l',
         action="store_true",
         dest="testlink",
-        help='test flag. if true, test DEV1 links connections\n',
+        help="test flag. if true, test DEV1 links connections\n",
     )
     parser.add_argument(
         '--tokenkey',
@@ -840,5 +871,46 @@ def main():
     poster.save_submission(book_data)
 
 
-if __name__ == '__main__':
+class SubmissionTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        print("setUpClass runs before ALL tests")
+        meta_structure = MetaStructure(TESTURL_META, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
+        # meta_structure.isupdate(args.isupdate)
+        # meta_structure.notest(args.notest)
+        # These options no longer saved in meta_structure
+
+        cls.reader = SheetReader(meta_structure, EXCEL_HEADER_ROW, EXCEL_DATA_START_ROW)
+
+        cls.test_book = xlrd.open_workbook("test/test_sheet.xlsx")
+        # cls.test_book = BookData(meta_structure)
+
+    def setUp(self):
+        print("setUp runs before EACH test")
+
+    def test_read_sheet(self):
+        sheet_obj = self.test_book.sheet_by_name("Litter")
+        self.reader.verify_column_names(sheet_obj)
+        sheet_data = self.reader.read_sheet(sheet_obj, self.test_book.datemode)
+        test_sheet_list = []
+        for record_object in sheet_data.all_records:
+            record_dict = record_object.__dict__
+            record_dict.pop("meta_structure")
+            test_sheet_list.append(record_dict)
+        with open('test/sheet_reader.json') as data_file:
+            expected_sheet_list = json.load(data_file)
+            self.assertEqual(expected_sheet_list, test_sheet_list)
+
+    # def test_duplication_check(self):
+    #     pass
+    #     # self.assertEqual(result, expected)
+
+    def tearDown(self):
+        print("tearDown runs after EACH test")
+
+    @classmethod
+    def tearDownClass(cls):
+        print("tearDownClass runs after ALL tests")
+
+if __name__ == "__main__":
     main()
