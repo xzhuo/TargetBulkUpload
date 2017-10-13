@@ -125,6 +125,17 @@ class MetaStructure:
         for category in self.schema_dict:
             self.schema_dict[category].append({"name": "accession", "text": "System Accession", "type": "text"})
 
+    def start_metastructure(self, notest, all_categories, schema_string, relationship_string, version_string):
+        if notest:
+            action_url_meta = URL_META
+            action_url_submit = URL_SUBMIT
+        else:
+            action_url_meta = TESTURL_META
+            action_url_submit = TESTURL_SUBMIT
+        meta_structure = MetaStructure(action_url_meta, all_categories, schema_string, relationship_string, version_string)
+        return meta_structure
+
+
     def get_sheet_url(self, sheet_name):
         """Return a url of the provided sheet name."""
         pass
@@ -841,7 +852,7 @@ def main():
         action_url_meta = TESTURL_META
         action_url_submit = TESTURL_SUBMIT
 
-    meta_structure = MetaStructure(action_url_meta, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
+    meta_structure = MetaStructure.start_metastructure(args.notest, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
     # meta_structure.isupdate(args.isupdate)
     # meta_structure.notest(args.notest)
     # These options no longer saved in meta_structure
