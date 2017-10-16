@@ -3,7 +3,7 @@
     "relationships": {
       "dam": {
         "mouse": [
-          "NA"
+          ""
         ]
       },
       "part_of": {
@@ -36,12 +36,12 @@
     "relationships": {
       "dam": {
         "mouse": [
-          "NA"
+          ""
         ]
       },
       "part_of": {
         "bioproject": [
-          "NA"
+          ""
         ]
       },
       "sire": {

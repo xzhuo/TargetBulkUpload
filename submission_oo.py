@@ -406,7 +406,7 @@ class Poster:
             post_url = meta_url + '/api/' + categories
             valid = 1
         else:
-            logging.info("skip record %s %s in %s." %(accession, user_accession, sheet_name))
+            logging.info("skip record %s %s in %s." % (accession, user_accession, sheet_name))
 
         if valid:
             post_body = row_data.schema
@@ -418,14 +418,14 @@ class Poster:
                 if "accession" in response:
                     row_data.schema["accession"] = response["accession"]
                     row_data.submission("submitted")
-                    print("successfully submitted record %s in %s to database as %s." %(user_accession, sheet_name, row_data.schema["accession"]))
+                    print("successfully submitted record %s in %s to database as %s." % (user_accession, sheet_name, row_data.schema["accession"]))
                 else:
                     row_data.schema["accession"] = accession
                     row_data.submission("updated")
-                    print("successfully updated record %s %s in %s." %(accession, user_accession, sheet_name))
+                    print("successfully updated record %s %s in %s." % (accession, user_accession, sheet_name))
             else:
                 # should I sys.exit it, or just a warning with failed submission?
-                sys.exit("post request of %s %s in %s failed!" %(accession, user_accession, sheet_name))
+                sys.exit("post request of %s %s in %s failed!" % (accession, user_accession, sheet_name))
 
     def link_record(self, row_data):
         sheet_name = row_data.sheet_name
@@ -664,12 +664,15 @@ class RowData:
         self.schema = dict()
         self.relationships = dict()
 
-    def add(self, column_header, value):  # add or replace value in column
+    def add(self, column_header, value):
+        """Add or replace value in column. Convert "NA" in link columns to "". """
         sheet_name = self.sheet_name
         meta_structure = self.meta_structure
         column_name = meta_structure.get_column_name(sheet_name, column_header)
         if column_header in meta_structure.get_link_column_headers(sheet_name):
             # do link stuff
+            if value == "NA":
+                value = ""
             accession_list = value.split(",")  # split value in cell by ",""
             sheetlinkto = meta_structure.get_linkto(self.sheet_name, column_header)
             categorylinkto = meta_structure.get_category(sheetlinkto)
@@ -771,6 +774,7 @@ class RowData:
             if ctype == CTYPE_NUMBER:
                 value = round(value, 2)
 
+        # Convert "NA" to "" for link columns occurs in the self.add method.
         self.add(column_header, value)  # or use columan display name?
 
 
