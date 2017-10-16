@@ -578,6 +578,69 @@ class Poster:
             else:
                 raise Error("The code should never reach this point")
 
+'''
+Silas's version:
+def duplication_check(self, sheet_data):
+    """
+    Make sure all the system accessions and user accessions are unique in the sheet.
+
+    In the input sheet_data, each record has been validated.
+    At least one of user or system accession exists, the other one must be "" if don't exists.
+
+    If the record exists in the database, make sure both system and user accession match the record in the database.
+    If there is only one accession in the sheet record, fetch and fill in the other accession from database.
+
+    In the end, for records exist in database, both system and user accession must exist in the record;
+    fo new records, only user accession in the record, system accession is ""
+    """
+
+    sheet_name = sheet_data.name
+    existing_data = self.fetch_all(sheet_name)
+    system_accession_lookup = {x["user_accession"]: x["accession"] for x in existing_data}  # python2.7+
+    if len(system_accession_lookup) != len(existing_data):
+        sys.exit("Redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
+    user_accession_lookup = {x["accession"]: x["user_accession"] for x in existing_data}
+    # You may or may not want to check if there are redundant system accessions; I don't know.
+
+    user_accession_set = set()
+    system_accession_set = set()
+    for record in sheet_data.all_records:
+        sys_accession = record.schema["accession"] or None
+        user_accession = record.schema["user_accession"] or None
+
+        if user_accession in user_accession_set:
+            sys.exit("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
+        if sys_accession in system_accession_set:
+            sys.exit("System accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (sys_accession, sheet_name))
+
+        user_accession_to_add = None # Anything that is not None will be added to the set.
+        sys_accession_to_add = None
+        if user_accession and sys_accession:
+            existing_sys_accession = system_accession_lookup.get(user_accession)
+            if existing_sys_accession is None or sys_accession != existing_sys_accession
+                sys.exit("Accession %s in %s does not match our records!" % (sys_accession, sheet_name))
+            user_accession_to_add = user_accession
+            sys_accession_to_add = sys_accession # Will match existing_sys_accession
+        elif user_accession: # (and not sys_accession)
+            existing_sys_accession = system_accession_lookup.get(user_accession)
+            user_accession_to_add = user_accession
+            sys_accession_to_add = existing_sys_accession # Could be None
+        elif sys_accession: # (and not user_accession)
+            existing_user_accession = user_accession_lookup.get(sys_accession)
+            if not existing_user_accession:
+                sys.exit("System accession %s in %s does not exist in our records!" % (sys_accession, sheet_name))
+            user_accession_to_add = existing_user_accession
+            sys_accession_to_add = sys_accession
+        else: # They cannot both be None!
+            assert(False)
+        
+        if user_accession_to_add is None:
+            assert(False) # Bug!! Note that all code paths assign a non-None value to user_accession_to_add
+        user_accession_set.add(user_accession_to_add)
+        if sys_accession_to_add is not None: # It's ok for this one to be None.
+            system_accession_set.add(sys_accession_to_add)
+'''
+
 
 class BookData:
     def __init__(self, meta_structure):
