@@ -17,10 +17,10 @@ URL_META = 'http://target.wustl.edu:7006'
 URL_SUBMIT = 'http://target.wustl.edu:7002'
 TESTURL_META = 'http://target.wustl.edu:8006'
 TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
-SCHEMA_STRING = '/schema/'
-RELATIONSHIP_STRING = '/schema/relationships/'
-VERSION_STRING = '/api/version'
-NUMBER_ZEROS = 3
+# SCHEMA_STRING = '/schema/'
+# RELATIONSHIP_STRING = '/schema/relationships/'
+# VERSION_STRING = '/api/version'
+ACCESSION_PLACEHOLDER_DIGITS = 3
 
 TIMEOUT = 10  # the max time (seconds) allowed for each API call. TODO: implementation timeout in requests.
 # The ctype represents in xlrd package parsering excel file:
@@ -30,24 +30,26 @@ CTYPE_BOOLEAN = 4
 EXCEL_HEADER_ROW = 1
 EXCEL_DATA_START_ROW = EXCEL_HEADER_ROW + 1
 # The database json name : excel worksheet name correlation:
-ALL_CATEGORIES = {"assay": "Assay",
-                  "bioproject": "Bioproject",
-                  "biosample": "Biosample",
-                  "diet": "Diet",
-                  "experiment": "Experiment",
-                  "file": "File",
-                  "lab": "Lab",
-                  "library": "Library",
-                  "litter": "Litter",
-                  "mouse": "Mouse",
-                  "reagent": "Reagent",
-                  "treatment": "Treatment",
-                  "mergedFile": "Mergedfile"
-                  }
+# ALL_CATEGORIES = {"assay": "Assay",
+#                   "bioproject": "Bioproject",
+#                   "biosample": "Biosample",
+#                   "diet": "Diet",
+#                   "experiment": "Experiment",
+#                   "file": "File",
+#                   "lab": "Lab",
+#                   "library": "Library",
+#                   "litter": "Litter",
+#                   "mouse": "Mouse",
+#                   "reagent": "Reagent",
+#                   "treatment": "Treatment",
+#                   "mergedFile": "Mergedfile"
+#                   }
+
+ALL_CATEGORIES = ["assay", "bioproject", "biosample", "diet", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "treatment", "mergedFile"]
 
 
 class MetaStructure:
-    def __init__(self, url, categories, schema_string, relationship_string, version_string):
+    def __init__(self, url, all_categories, schema_string = '/schema/', relationship_string = '/schema/relationships/', version_string = '/api/version'):
         """
         Set up metastructure.
 
@@ -116,7 +118,7 @@ class MetaStructure:
         }
         """
         self.url = url
-        self.categories = categories  # it is a dictionary
+        self.category_to_sheet_name = self._set_category_to_sheet_name(all_categories)  # it is a dictionary
         self.schema_dict = self._url_to_json(schema_string)
         self.link_dict = self._url_to_json(relationship_string)
         self.version = self._set_version(version_string)
@@ -125,15 +127,16 @@ class MetaStructure:
         for category in self.schema_dict:
             self.schema_dict[category].append({"name": "accession", "text": "System Accession", "type": "text"})
 
-    def start_metastructure(self, notest, all_categories, schema_string, relationship_string, version_string):
-        if notest:
-            action_url_meta = URL_META
-            action_url_submit = URL_SUBMIT
-        else:
-            action_url_meta = TESTURL_META
-            action_url_submit = TESTURL_SUBMIT
-        meta_structure = MetaStructure(action_url_meta, all_categories, schema_string, relationship_string, version_string)
-        return meta_structure
+    # def start_metastructure(self, isproduction, all_categories, schema_string, relationship_string, version_string):
+    #     # FIXME Move to separate file
+    #     if isproduction:
+    #         action_url_meta = URL_META
+    #         action_url_submit = URL_SUBMIT
+    #     else:
+    #         action_url_meta = TESTURL_META
+    #         action_url_submit = TESTURL_SUBMIT
+    #     meta_structure = MetaStructure(action_url_meta, all_categories, schema_string, relationship_string, version_string)
+    #     return meta_structure`
 
 
     def get_sheet_url(self, sheet_name):
@@ -174,7 +177,7 @@ class MetaStructure:
         :return: the user accession rule prefix for the sheet.
         """
         link = self.get_sheet_link(sheet_name)
-        return link["usr_prefix"][:-NUMBER_ZEROS]
+        return link["usr_prefix"][:-ACCESSION_PLACEHOLDER_DIGITS]
 
         # alternative solution:
         # schema = self.get_schema(sheet_name)
@@ -188,7 +191,7 @@ class MetaStructure:
         :return: the system accession rule prefix for the sheet.
         """
         link = self.get_sheet_link(sheet_name)
-        return link["prefix"][:-NUMBER_ZEROS]
+        return link["prefix"][:-ACCESSION_PLACEHOLDER_DIGITS]
 
     def get_schema_column_headers(self, sheet_name):  # get a list of all column display names, including "System Accession"
         """Return a list of all column display names except relationship columns. Because of L123-125, "System Accession" is also in the list."""
@@ -229,18 +232,21 @@ class MetaStructure:
         if column_header in self.get_link_column_headers(sheet_name):
             link = self.get_sheet_link(sheet_name)
             category = [x["to"] for x in link["connections"] if x["display_name"] == column_header][0]
-            return self.categories[category]
+            return self.category_to_sheet_name[category]
         else:
             sys.exit("%s in %s is not a connection column" % (column_header, sheet_name))
 
     def _url_to_json(self, string):
         """Fetch the data from a url and get a dictionary or a list."""
         new_dict = {}
-        for category, sheet_name in self.categories.items():
+        for category, sheet_name in self.category_to_sheet_name.items():
             json_url = self.url + string + category + '.json'
             data = requests.get(json_url).json()["data"]  # data is a list for schema, but data is a dict for links. within links: data['connections'] is a list.
             new_dict[sheet_name] = data
         return new_dict
+
+    def _set_category_to_sheet_name(self, all_categories):  # it is a dictionary
+        return {k:k.lower().title() for k in all_categories}
 
     def _set_version(self, version_string):
         """ Giver a version string (part of the url), returns the latested database structure version."""
@@ -332,13 +338,13 @@ class SheetReader:
 
 
 class Poster:
-    def __init__(self, token, meta_url, submit_url, isupdate, notest, meta_structure):
+    def __init__(self, token, meta_url, submit_url, isupdate, isproduction, meta_structure):
         self.token = token
         self.token_key = 'bearer ' + token
         self.meta_url = meta_url
         self.submit_url = submit_url
         self.isupdate = isupdate
-        self.notest = notest
+        self.isproduction = isproduction
         self.meta_structure = meta_structure
         self.token_header = {"Authorization": self.token_key}
         self.user_name = self.set_username()
@@ -372,8 +378,8 @@ class Poster:
 
     def submit_record(self, row_data):
         """
-        The row_data is validated, but update, submit, test, notest are processed the same until now.
-        submit or update record row_data to database. if it is not notest, replace accession with random string and submit.
+        The row_data is validated, but update, submit, test, isproduction are processed the same until now.
+        submit or update record row_data to database. if it is not isproduction, replace accession with random string and submit.
         if isupdate:
             if no accession
                 skip
@@ -381,7 +387,7 @@ class Poster:
                 update request
         else
             if no accession
-                if notest
+                if isproduction
                     submit request
                 else
                     replace user_accession
@@ -390,7 +396,7 @@ class Poster:
                 skip
         """
         isupdate = self.isupdate
-        notest = self.notest
+        isproduction = self.isproduction
         sheet_name = row_data.sheet_name
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         accession = row_data.schema["accession"]
@@ -401,7 +407,7 @@ class Poster:
             post_url = meta_url + '/api/' + categories + '/' + accession
             valid = 1
         elif (not isupdate) and accession == "":
-            if not notest:
+            if not isproduction:
                 row_data.replace_accession()  # replace user accession with new random string, and save old accssion.
             post_url = meta_url + '/api/' + categories
             valid = 1
@@ -454,9 +460,9 @@ class Poster:
                 to_remove = new_accession_set - existing_accession_set
                 to_add = existing_accession_set - new_accession_set
                 for linkto_accession in to_remove:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "remove")
+                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=False)
                 for linkto_accession in to_add:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
+                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=True)
 
     def submit_link(self, row_data):
         sheet_name = row_data.sheet_name
@@ -465,12 +471,16 @@ class Poster:
             for linkto_category in row_data.relationships[column_name]:
                 accession_list = row_data.relationships[column_name][linkto_category]
                 for linkto_accession in accession_list:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, "add")
+                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=True)
 
-    def link_change(self, sheet_name, system_accession, linkto_category, linkto_accession, connection_name, direction):
+    def link_change(self, sheet_name, system_accession, linkto_category, linkto_accession, connection_name, is_add):
         """
         direction is either "remove" or "add"
         """
+        if is_add:
+            direction = "add"
+        else:
+             direction = "remove"
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
         link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
@@ -523,6 +533,8 @@ class Poster:
             sys.exit("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
         existing_user_system_accession_pair = {x["user_accession"]: x["accession"] for x in existing_sheet_data}  # python2.7+
         existing_system_accessions = existing_user_system_accession_pair.values()
+        # FIMXE user_accessions_in_sheet = Set(...)
+        # system_accessions_in_sheet = Set(...)
         user_accession_list = []
         system_accession_list = []
         for record in sheet_data.all_records:
@@ -540,6 +552,8 @@ class Poster:
                         user_accession_list.append(user_accession)
                         system_accession_list.append(accession)
                     else:
+                        #FIXME instead of sys.exit,
+                        # raise ValidationError("message"), then catch in main
                         sys.exit("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
                 else:
                     sys.exit("accession %s or %s in %s does not match our database record!" % (user_accession, accession, sheet_name))
@@ -552,7 +566,7 @@ class Poster:
                     matching_user_accession = [k for k, v in existing_user_system_accession_pair.items() if v == accession][0]
                     user_accession_list.append(matching_user_accession)
                     system_accession_list.append(accession)
-            else:  # user_accession != "" and accession == ""
+            elif user_accession != "" and accession == "":
                 if user_accession in user_accession_list:
                     sys.exit("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
                 elif user_accession in existing_user_accessions:
@@ -561,6 +575,8 @@ class Poster:
                     system_accession_list.append(matching_accession)
                 else:
                     user_accession_list.append(user_accession)
+            else:
+                raise Error("The code should never reach this point")
 
 
 class BookData:
@@ -607,6 +623,7 @@ class BookData:
                             if accession in accession_table:
                                 accession_list[index] = accession_table[accession]
 
+#FIXME Put all validation in class SheetValidator or whatever you want to call it
 
 class SheetData:
     def __init__(self, sheet_name, meta_structure):
@@ -790,10 +807,19 @@ def get_args():
         help="The excel used for bulk upload. Required.\n",
     )
     parser.add_argument(
+        '--isproduction',
+        action="store_true",
+        dest="isproduction",
+        help="test flag. default option is true, which will submit all the metadata to the test database. \
+        The metadata only goes to the production database if this option is false. Our recommended practice is use \
+        TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
+        metadata successfully submitted to test database.\n",
+    )
+    parser.add_argument(
         '--notest',
         '-n',
         action="store_true",
-        dest="notest",
+        dest="isproduction",
         help="test flag. default option is true, which will submit all the metadata to the test database. \
         The metadata only goes to the production database if this option is false. Our recommended practice is use \
         TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
@@ -849,28 +875,28 @@ def main():
         logging.error("please provide a user API key!")
         sys.exit("please provide a user API key!")  # make token argument mandatory.
 
-    if args.notest:
+    if args.isproduction:
         action_url_meta = URL_META
         action_url_submit = URL_SUBMIT
     else:
         action_url_meta = TESTURL_META
         action_url_submit = TESTURL_SUBMIT
 
-    meta_structure = MetaStructure.start_metastructure(args.notest, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
+    meta_structure = MetaStructure(action_url_meta, ALL_CATEGORIES)
     # meta_structure.isupdate(args.isupdate)
-    # meta_structure.notest(args.notest)
+    # meta_structure.isproduction(args.isproduction)
     # These options no longer saved in meta_structure
 
     reader = SheetReader(meta_structure, EXCEL_HEADER_ROW, EXCEL_DATA_START_ROW)
-    poster = Poster(args.token, action_url_meta, action_url_submit, args.isupdate, args.notest, meta_structure)
+    poster = Poster(args.token, action_url_meta, action_url_submit, args.isupdate, args.isproduction, meta_structure)
 
     workbook = xlrd.open_workbook(args.excel)
     book_data = BookData(meta_structure)
     sheet_names = workbook.sheet_names()
-    for sheet in sheet_names:
-        if sheet not in meta_structure.schema_dict.keys():  # skip "Instructions" and "Lists"
+    for sheet_name in sheet_names:
+        if sheet_name not in meta_structure.schema_dict.keys():  # skip "Instructions" and "Lists"
             continue
-        sheet_obj = workbook.sheet_by_name(sheet)
+        sheet_obj = workbook.sheet_by_name(sheet_name)
         reader.verify_column_names(sheet_obj)
         sheet_data = reader.read_sheet(sheet_obj, workbook.datemode)
         poster.duplication_check(sheet_data)
@@ -890,9 +916,9 @@ class SubmissionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("setUpClass runs before ALL tests")
-        meta_structure = MetaStructure(TESTURL_META, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
+        meta_structure = MetaStructure(TESTURL_META, ALL_CATEGORIES)
         # meta_structure.isupdate(args.isupdate)
-        # meta_structure.notest(args.notest)
+        # meta_structure.isproduction(args.isproduction)
         # These options no longer saved in meta_structure
 
         cls.reader = SheetReader(meta_structure, EXCEL_HEADER_ROW, EXCEL_DATA_START_ROW)
