@@ -251,7 +251,8 @@ class MetaStructure:
         """ Giver a version string (part of the url), returns the latested database structure version."""
         full_url = self.url + version_string
         return requests.get(full_url).json()
-"""
+    def _get_column_info(self, sheet_name, column_header, info):
+        """
         Given a excel sheet name and a column displayname (column_header), returns desired infomation.
 
         if info == "name", returns the database field name (column_name).
@@ -270,8 +271,6 @@ class MetaStructure:
         else:
             sys.exit("unknow info %s of %s in %s" % (info, column_header, sheet_name))
         return info
-    def _get_column_info(self, sheet_name, column_header, info):
-        
 
 
 class SheetReader:
@@ -871,7 +870,7 @@ def get_args():
     parser.add_argument(
         '--isproduction',
         action="store_true",
-        dest="isproduction",
+        dest="is_production",
         help="test flag. default option is true, which will submit all the metadata to the test database. \
         The metadata only goes to the production database if this option is false. Our recommended practice is use \
         TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
@@ -881,7 +880,7 @@ def get_args():
         '--notest',
         '-n',
         action="store_true",
-        dest="isproduction",
+        dest="is_production",
         help="test flag. Without the flag it will submit all the metadata to the test database. \
         The metadata only goes to the production database if this option is TRUE. Our recommended practice is use \
         FALSE flag (default) here first to test the integrity of metadata, only switch to TRUE once all the \
@@ -937,7 +936,7 @@ def main():
         logging.error("please provide a user API key!")
         sys.exit("please provide a user API key!")  # make token argument mandatory.
 
-    if args.isproduction:
+    if args.is_production:
         action_url_meta = URL_META
         action_url_submit = URL_SUBMIT
     else:

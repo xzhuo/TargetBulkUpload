@@ -17,7 +17,12 @@ import submission_oo
 # Got all the constant from submission.py.
 EXCEL_HEADER_ROW = 1
 EXCEL_DATA_START_ROW = EXCEL_HEADER_ROW + 1
-meta_structure = MetaStructure(action_url_meta, ALL_CATEGORIES)
+
+URL_META = 'http://target.wustl.edu:7006'
+URL_SUBMIT = 'http://target.wustl.edu:7002'
+TESTURL_META = 'http://target.wustl.edu:8006'
+TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
+ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile", "experiment",]
 
 
 def get_args():
@@ -54,8 +59,17 @@ def main():
     args = get_args()
     is_production = args.is_production or args.notest
 
-    meta_structure = submission_oo.MetaStructure.start_metastructure(is_production, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
-    version = meta_structure.version
+
+    if args.is_production:
+        action_url_meta = URL_META
+        action_url_submit = URL_SUBMIT
+    else:
+        action_url_meta = TESTURL_META
+        action_url_submit = TESTURL_SUBMIT
+    meta_structure = submission_oo.MetaStructure(action_url_meta, ALL_CATEGORIES)
+    # meta_structure = submission_oo.MetaStructure.start_metastructure(is_production, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
+    version_dict = meta_structure.version
+    version = version_dict['current']
     if args.submission:
         # Retrieve submission JSON
         submission_string = requests.get(args.submission).text
@@ -80,7 +94,7 @@ def main():
     # Create Lists worksheet
     sheet1 = workbook.add_worksheet('Lists')
     lists = 0
-    for category, sheet_name in meta_structure.categories.items():
+    for sheet_name in meta_structure.schema_dict.keys():
         categories = meta_structure.get_categories(sheet_name)
         # print category
         logging.info("working on %s!" % sheet_name)
@@ -106,12 +120,12 @@ def main():
         for m in range(0, len(sheet_schema)):
             # Write header
             column_dict = sheet_schema[m]
-            if column_dict['required']:  # Color-coding required and optional fields
+            if 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
                 sheet.write(EXCEL_HEADER_ROW, m + 1, column_dict['text'], bold_dark)
             else:
                 sheet.write(EXCEL_HEADER_ROW, m + 1, column_dict['text'], bold_light)
             # Write comment
-            if len(column_dict['placeholder']) > 0:
+            if 'placeholder' in column_dict and len(column_dict['placeholder']) > 0:
                 sheet.write_comment(EXCEL_HEADER_ROW, m + 1, column_dict['placeholder'])
             # Format entire column
             if 'values' in column_dict:  # Drop-down
