@@ -125,7 +125,7 @@ class MetaStructure:
 
         # Add system accession to the schema dictionary:
         for category in self.schema_dict:
-            self.schema_dict[category].append({"name": "accession", "text": "System Accession", "type": "text"})
+            self.schema_dict[category].insert(0, {"name": "accession", "text": "System Accession", "type": "text"})
 
     # def start_metastructure(self, isproduction, all_categories, schema_string, relationship_string, version_string):
     #     # FIXME Move to separate file

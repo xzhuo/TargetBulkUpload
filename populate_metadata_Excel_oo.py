@@ -109,27 +109,29 @@ def main():
 
         # Column headers
         bold_gray = workbook.add_format({'bold': True, 'bg_color': 'B6B6B6'})
-        sheet.write(EXCEL_HEADER_ROW, 0, 'System Accession', bold_gray)
+        # sheet.write(EXCEL_HEADER_ROW, 0, 'System Accession', bold_gray)  # With my OO scipt, system accession is already there.
         # Field columns
         bold_dark = workbook.add_format({'bold': True, 'bg_color': 'FED254'})  # format3 used for required columns
         bold_light = workbook.add_format({'bold': True, 'bg_color': 'FFB602'})  # format4 used for not required columns
         bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
         bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
         # schema columns
-        for m in range(0, len(sheet_schema) - 1):  # remove system accession column at the end.
+        for m in range(0, len(sheet_schema)):
             # Write header
             column_dict = sheet_schema[m]
-            if 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
-                sheet.write(EXCEL_HEADER_ROW, m + 1, column_dict['text'], bold_dark)
+            if m == 0:
+                sheet.write(EXCEL_HEADER_ROW, m, column_dict['text'], bold_gray)  # system accession
+            elif 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
+                sheet.write(EXCEL_HEADER_ROW, m, column_dict['text'], bold_dark)
             else:
-                sheet.write(EXCEL_HEADER_ROW, m + 1, column_dict['text'], bold_light)
+                sheet.write(EXCEL_HEADER_ROW, m, column_dict['text'], bold_light)
             # Write comment
             if 'placeholder' in column_dict and len(column_dict['placeholder']) > 0:
-                sheet.write_comment(EXCEL_HEADER_ROW, m + 1, column_dict['placeholder'])
+                sheet.write_comment(EXCEL_HEADER_ROW, m, column_dict['placeholder'])
             # Format entire column
             if 'values' in column_dict:  # Drop-down
                 if column_dict['values_restricted']:  # Drop-down with restricted values
-                    sheet.data_validation(EXCEL_DATA_START_ROW, m + 1, 10000, m + 1,
+                    sheet.data_validation(EXCEL_DATA_START_ROW, m, 10000, m,
                                           {'validate': 'list',
                                            'source': column_dict['values'],
                                            'input_title': 'Enter a value:',
@@ -138,7 +140,7 @@ def main():
                                            'error_message': 'Select value from list.'
                                            })
                 else:  # Drop-down with non-restricted values
-                    sheet.data_validation(EXCEL_DATA_START_ROW, m + 1, 10000, m + 1,
+                    sheet.data_validation(EXCEL_DATA_START_ROW, m, 10000, m,
                                           {'validate': 'length',  # Work on this
                                            'criteria': '>',
                                            'value': 1,
@@ -151,9 +153,9 @@ def main():
         # Connection columns
         for n in range(0, len(sheet_relationships['connections'])):
             link_dict = sheet_relationships['connections'][n]
-            sheet.write(EXCEL_HEADER_ROW, n + m + 2, link_dict['display_name'], bold_blue)
+            sheet.write(EXCEL_HEADER_ROW, n + m + 1, link_dict['display_name'], bold_blue)
             if len(link_dict['placeholder']) > 0:
-                sheet.write_comment(EXCEL_HEADER_ROW, n + m + 2, link_dict['placeholder'])
+                sheet.write_comment(EXCEL_HEADER_ROW, n + m + 1, link_dict['placeholder'])
 
         # Write each object onto a single row, connection fields last
         logging.info("filling data in sheet %s" % sheet_name)
@@ -170,9 +172,9 @@ def main():
                     row += 1
                     # record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json().get('mainObj')
                     record_row = poster.fetch_record(sheet_name, entry)  # A Rowdata obj.
-                    sheet.write(row, 0, entry)  # Write System Accession
-                    column = 1
-                    for i in range(0, len(sheet_schema) - 1):  # remove system accession column at the end.
+                    # sheet.write(row, 0, entry)  # Write System Accession
+                    # column = 0
+                    for i in range(0, len(sheet_schema)):
                         column_dict = sheet_schema[i]
                         field = column_dict['name']
                         datatype = column_dict['type']
@@ -182,17 +184,17 @@ def main():
                             if (datatype == "date"):  # For dates, convert to date format if possible
                                 try:
                                     float(record_data)
-                                    sheet.write(row, column, float(record_data), date_format)
+                                    sheet.write(row, i, float(record_data), date_format)
                                 except ValueError:
-                                    sheet.write(row, column, record_data)
+                                    sheet.write(row, i, record_data)
                             else:
-                                sheet.write(row, column, record_data)
+                                sheet.write(row, i, record_data)
                         elif requrirement == "true":  # Print placeholders only if field is required
                             if datatype == "number":
-                                sheet.write(row, column, -1)
+                                sheet.write(row, i, -1)
                             else:
-                                sheet.write(row, column, 'NA')
-                        column += 1
+                                sheet.write(row, i, 'NA')
+                        # column += 1
                     for j in range(0, len(sheet_relationships['connections'])):
                         link_dict = sheet_relationships['connections'][j]
                         connection = link_dict['name']
@@ -201,8 +203,8 @@ def main():
                                 links_to = record_row.relationships[connection][connection_name]
 
                         if len(links_to) > 0:
-                            sheet.write(row, column, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
-                        column += 1
+                            sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
+                        # column += 1
 
     workbook.close()
 
