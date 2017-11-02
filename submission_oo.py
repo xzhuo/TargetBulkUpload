@@ -345,7 +345,8 @@ class Poster:
         self.isproduction = isproduction
         self.meta_structure = meta_structure
         self.token_header = {"Authorization": self.token_key}
-        self.user_name = self.set_username()
+        if token != '':
+            self.user_name = self.set_username()
 
     def set_username(self):
         token_url = self.submit_url + '/api/usertoken/' + self.token
@@ -870,7 +871,7 @@ def get_args():
     parser.add_argument(
         '--isproduction',
         action="store_true",
-        dest="is_production",
+        dest="isproduction",
         help="test flag. default option is true, which will submit all the metadata to the test database. \
         The metadata only goes to the production database if this option is false. Our recommended practice is use \
         TRUE flag (default) here first to test the integrity of metadata, only switch to FALSE once all the \
@@ -880,7 +881,7 @@ def get_args():
         '--notest',
         '-n',
         action="store_true",
-        dest="is_production",
+        dest="isproduction",
         help="test flag. Without the flag it will submit all the metadata to the test database. \
         The metadata only goes to the production database if this option is TRUE. Our recommended practice is use \
         FALSE flag (default) here first to test the integrity of metadata, only switch to TRUE once all the \
@@ -936,7 +937,7 @@ def main():
         logging.error("please provide a user API key!")
         sys.exit("please provide a user API key!")  # make token argument mandatory.
 
-    if args.is_production:
+    if args.isproduction:
         action_url_meta = URL_META
         action_url_submit = URL_SUBMIT
     else:

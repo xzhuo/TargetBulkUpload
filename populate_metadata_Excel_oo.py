@@ -59,8 +59,7 @@ def main():
     args = get_args()
     is_production = args.is_production or args.notest
 
-
-    if args.is_production:
+    if is_production:
         action_url_meta = URL_META
         action_url_submit = URL_SUBMIT
     else:
@@ -117,7 +116,7 @@ def main():
         bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
         bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
         # schema columns
-        for m in range(0, len(sheet_schema)):
+        for m in range(0, len(sheet_schema) - 1):  # remove system accession column at the end.
             # Write header
             column_dict = sheet_schema[m]
             if 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
@@ -162,20 +161,22 @@ def main():
             row = EXCEL_HEADER_ROW
             entries_string = submission["details"]
             whole_data = json.loads(entries_string.replace("'", "\""))  # Gets a list of all accessions created for that object category
+            poster = submission_oo.Poster('', action_url_meta, action_url_submit, '', args.is_production, meta_structure)
             date_format = workbook.add_format({'num_format': 'mm/dd/yy'})  # Format for date fields
             if categories in whole_data:
                 entry_list = whole_data[categories]
                 for entry in entry_list:
+                    print(entry)
                     row += 1
-                    record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json()
-                    record_row = submission_oo.Poster.fetch_record(sheet_name, entry)  # A Rowdata obj.
-
+                    # record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json().get('mainObj')
+                    record_row = poster.fetch_record(sheet_name, entry)  # A Rowdata obj.
+                    sheet.write(row, 0, entry)  # Write System Accession
                     column = 1
-                    for i in range(0, len(sheet_schema)):
+                    for i in range(0, len(sheet_schema) - 1):  # remove system accession column at the end.
                         column_dict = sheet_schema[i]
                         field = column_dict['name']
                         datatype = column_dict['type']
-                        requrirement = column_dict['required']
+                        requrirement = column_dict.get('required')
                         if field in record_row.schema.keys():
                             record_data = record_row.schema[field]
                             if (datatype == "date"):  # For dates, convert to date format if possible
@@ -195,7 +196,7 @@ def main():
                     for j in range(0, len(sheet_relationships['connections'])):
                         link_dict = sheet_relationships['connections'][j]
                         connection = link_dict['name']
-                        for connection_name in record.relationships[connection]:
+                        for connection_name in record_row.relationships[connection]:
                             if connection_name == link_dict['to']:
                                 links_to = record_row.relationships[connection][connection_name]
 
