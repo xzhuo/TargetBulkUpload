@@ -202,6 +202,16 @@ class MetaStructure:
         link = self.get_sheet_link(sheet_name)
         return [x["display_name"] for x in link["connections"]]
 
+    def get_schema_column_names(self, sheet_name):  # get a list of all column names, including "accession"
+        """Return a list of all column names except relationship columns. Because of L123-125, "accession" is also in the list."""
+        schema = self.get_sheet_schema(sheet_name)
+        return [x["name"] for x in schema]
+
+    def get_link_column_names(self, sheet_name):  # get a list of all column names
+        """Return a list of all relationship column names."""
+        link = self.get_sheet_link(sheet_name)
+        return [x["name"] for x in link["connections"]]
+
     def get_all_column_headers(self, sheet_name):
         """Return a list of all column display names. Because of L123-125, "System Accession" is also in the list."""
         return self.get_schema_column_headers(sheet_name) + self.get_link_column_headers(sheet_name)
@@ -334,6 +344,15 @@ class SheetReader:
             sheet_data.filter_add(row_data)
         return sheet_data
 
+    def Write_sheet(self, sheet_obj)
+        pass
+
+    def write_book_header(self, book_obj)
+        pass
+
+    def write_book_rows(self, book_obj)
+        pass
+
 
 class Poster:
     def __init__(self, token, meta_url, submit_url, isupdate, isproduction, meta_structure):
@@ -374,6 +393,28 @@ class Poster:
         response = requests.get(get_url).json()
         full_list = response[categories]  # returns a list of existing records.
         return [x for x in full_list if x['user'] == user_name]
+
+    def fetch_cypher_out(self, json, sheet_name):
+        """
+        temporarily use the downloaded json file as input for now.
+        """
+        with open json as file:
+            response = json.load(file)
+        sheet_record = SheetData(sheet_name, self.meta_structure)
+        for data in response['data']:
+            record = RowData(sheet_name, self.meta_structure)
+            record.schema = record["row"][0]
+            # initiate empty record relationship strcuture:
+            for column_header in meta_structure.get_link_column_headers(sheet_name):
+                # do link stuff
+                column_name = meta_structure.get_column_name(sheet_name, column_header):
+                sheetlinkto = meta_structure.get_linkto(self.sheet_name, column_header)
+                categorylinkto = meta_structure.get_category(sheetlinkto)
+                record.relationships[column_name] = {categorylinkto: []}
+            for connection in record["row"][1]:
+                record.relationships[connection['r']][connection['to']].append connection['m']  # may change r, to m to more meaningful variable names.
+            sheet_record.add_record(record)
+        return sheet_record
 
     def submit_record(self, row_data):
         """

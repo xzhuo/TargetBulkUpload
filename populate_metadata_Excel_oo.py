@@ -69,6 +69,8 @@ def main():
     # meta_structure = submission_oo.MetaStructure.start_metastructure(is_production, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
     version_dict = meta_structure.version
     version = version_dict['current']
+    poster = submission_oo.Poster('', action_url_meta, action_url_submit, '', is_production, meta_structure)
+
     if args.submission:
         # Retrieve submission JSON
         submission_string = requests.get(args.submission).text
@@ -78,8 +80,12 @@ def main():
         if "_id" not in submission:
             sys.exit("failed get request at line 64!")
         workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + submission["_id"] + '_V' + version + '.xlsx')  # The submission should be extracted, replace url
+        poster.write_header(workbook)
+        poster.write_data(workbook, submission)
+
     else:
         workbook = xlsxwriter.Workbook('TaRGET_metadata_V' + version + '.xlsx')
+        poster.write_header(workbook)
 
     # Create Instructions worksheet
     sheet0 = workbook.add_worksheet('Instructions')
@@ -163,12 +169,11 @@ def main():
             row = EXCEL_HEADER_ROW
             entries_string = submission["details"]
             whole_data = json.loads(entries_string.replace("'", "\""))  # Gets a list of all accessions created for that object category
-            poster = submission_oo.Poster('', action_url_meta, action_url_submit, '', args.is_production, meta_structure)
             date_format = workbook.add_format({'num_format': 'mm/dd/yy'})  # Format for date fields
             if categories in whole_data:
                 entry_list = whole_data[categories]
                 for entry in entry_list:
-                    print(entry)
+                    logging.info(entry)
                     row += 1
                     # record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json().get('mainObj')
                     record_row = poster.fetch_record(sheet_name, entry)  # A Rowdata obj.
