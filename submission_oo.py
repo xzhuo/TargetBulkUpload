@@ -482,6 +482,7 @@ class SheetReader:  # Of cause, the Reader can write, too.
     def Write_sheet(self, sheet_obj):
         pass
 
+
 class Poster:
     def __init__(self, token, meta_url, submit_url, isupdate, isproduction, meta_structure):
         self.token = token
@@ -526,23 +527,30 @@ class Poster:
         """
         temporarily use the downloaded json file as input for now.
         """
-        with open json as file:
+        meta_structure = self.meta_structure
+        with open(json, 'r') as file:
             response = json.load(file)
-        sheet_record = SheetData(sheet_name, self.meta_structure)
+        sheet_record = SheetData(sheet_name, meta_structure)
         for data in response['data']:
-            record = RowData(sheet_name, self.meta_structure)
+            record = RowData(sheet_name, meta_structure)
             record.schema = record["row"][0]
             # initiate empty record relationship strcuture:
             for column_header in meta_structure.get_link_column_headers(sheet_name):
                 # do link stuff
-                column_name = meta_structure.get_column_name(sheet_name, column_header):
+                column_name = meta_structure.get_column_name(sheet_name, column_header)
                 sheetlinkto = meta_structure.get_linkto(self.sheet_name, column_header)
                 categorylinkto = meta_structure.get_category(sheetlinkto)
                 record.relationships[column_name] = {categorylinkto: []}
             for connection in record["row"][1]:
-                record.relationships[connection['r']][connection['to']].append connection['m']  # may change r, to m to more meaningful variable names.
+                record.relationships[connection['r']][connection['to']].append(connection['m'])  # may change r, to m to more meaningful variable names.
             sheet_record.add_record(record)
         return sheet_record
+
+    def fetch_submission(self, submission):
+        """
+        returns a workbook
+        """
+        pass
 
     def submit_record(self, row_data):
         """
