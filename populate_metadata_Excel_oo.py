@@ -77,6 +77,7 @@ def main():
     # meta_structure = submission_oo.MetaStructure.start_metastructure(is_production, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
     version_dict = meta_structure.version
     version = version_dict['current']
+    poster = submission_oo.Poster('', action_url_meta, action_url_submit, '', is_production, meta_structure)
     reader = submission_oo.SheetReader(meta_structure, EXCEL_HEADER_ROW, EXCEL_DATA_START_ROW)
     if args.submission:
         # Retrieve submission JSON
@@ -87,18 +88,21 @@ def main():
         if "_id" not in submission:
             sys.exit("failed get request at line 64!")
         workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + submission["_id"] + '_V' + version + '.xlsx')  # The submission should be extracted, replace url
-        reader.write_header(workbook)
-        reader.write_book(workbook, submission, is_production)
+        reader.write_book_header(workbook)
+        book_data = poster.fetch_submission(submission)
+        reader.write_book(workbook, book_data)
         workbook.close()
     elif args.cypher:
-        sheet_record = submission_oo.
         workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + 'cypher_test' + version + '.xlsx')  # The submission should be extracted, replace url
-        reader.write_header(workbook)
-        reader.write_book(workbook, args.cypher, is_production)
+        reader.write_book_header(workbook)
+        with open(args.cypher, 'r') as file:
+            cypher_json = json.load(file)
+        book_data = poster.read_cypher(cypher_json, 'Assay')
+        reader.write_book(workbook, book_data)
         workbook.close()
     else:
         workbook = xlsxwriter.Workbook('TaRGET_metadata_V' + version + '.xlsx')
-        reader.write_header(workbook)
+        reader.write_book_header(workbook)
         workbook.close()
     # # Create Instructions worksheet
     # sheet0 = workbook.add_worksheet('Instructions')

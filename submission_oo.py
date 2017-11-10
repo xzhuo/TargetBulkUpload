@@ -346,7 +346,8 @@ class SheetReader:  # Of cause, the Reader can write, too.
 
     def write_book_header(self, workbook):
         meta_structure = self.meta_structure
-
+        version_dict = meta_structure.version
+        version = version_dict['current']
         # Create Instructions worksheet
         sheet0 = workbook.add_worksheet('Instructions')
         sheet0.write(0, 0, 'Version ' + version)  # This will need to come from URL, not hardcoded
@@ -419,65 +420,48 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 if len(link_dict['placeholder']) > 0:
                     sheet.write_comment(EXCEL_HEADER_ROW, n + m + 1, link_dict['placeholder'])
 
-    def write_book(self, workbook, submission, is_production):
-        if is_production:
-            action_url_meta = URL_META
-            action_url_submit = URL_SUBMIT
-        else:
-            action_url_meta = TESTURL_META
-            action_url_submit = TESTURL_SUBMIT
+    def write_book(self, workbook, book_data):
         meta_structure = self.meta_structure
-        poster = Poster('', action_url_meta, action_url_submit, '', is_production, meta_structure)
-        entries_string = submission["details"]
-        whole_data = json.loads(entries_string.replace("'", "\""))  # Gets a list of all accessions created for that object category
         date_format = workbook.add_format({'num_format': 'mm/dd/yy'})  # Format for date fields
-        for sheet_name in meta_structure.schema_dict.keys():
-            categories = meta_structure.get_categories(sheet_name)
+        for sheet_name, sheet_data in book_data.data.items():
             # print category
             logging.info("filling data in sheet %s!" % sheet_name)
             sheet_schema = meta_structure.get_sheet_schema(sheet_name)
             sheet_relationships = meta_structure.get_sheet_link(sheet_name)
             sheet = workbook.get_worksheet_by_name(sheet_name)
             row = EXCEL_HEADER_ROW
-            if categories in whole_data:
-                entry_list = whole_data[categories]
-                for entry in entry_list:
-                    logging.info(entry)
-                    row += 1
-                    # record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json().get('mainObj')
-                    record_row = poster.fetch_record(sheet_name, entry)  # A Rowdata obj.
-                    # sheet.write(row, 0, entry)  # Write System Accession
-                    # column = 0
-                    for i in range(0, len(sheet_schema)):
-                        column_dict = sheet_schema[i]
-                        field = column_dict['name']
-                        datatype = column_dict['type']
-                        requrirement = column_dict.get('required')
-                        if field in record_row.schema.keys():
-                            record_data = record_row.schema[field]
-                            if (datatype == "date"):  # For dates, convert to date format if possible
-                                try:
-                                    float(record_data)
-                                    sheet.write(row, i, float(record_data), date_format)
-                                except ValueError:
-                                    sheet.write(row, i, record_data)
-                            else:
+            for record_row in sheet_data.all_records:
+                row += 1
+                for i in range(0, len(sheet_schema)):
+                    column_dict = sheet_schema[i]
+                    field = column_dict['name']
+                    datatype = column_dict['type']
+                    requrirement = column_dict.get('required')
+                    if field in record_row.schema.keys():
+                        record_data = record_row.schema[field]
+                        if (datatype == "date"):  # For dates, convert to date format if possible
+                            try:
+                                float(record_data)
+                                sheet.write(row, i, float(record_data), date_format)
+                            except ValueError:
                                 sheet.write(row, i, record_data)
-                        elif requrirement == "true":  # Print placeholders only if field is required
-                            if datatype == "number":
-                                sheet.write(row, i, -1)
-                            else:
-                                sheet.write(row, i, 'NA')
-                        # column += 1
-                    for j in range(0, len(sheet_relationships['connections'])):
-                        link_dict = sheet_relationships['connections'][j]
-                        connection = link_dict['name']
-                        for connection_name in record_row.relationships[connection]:
-                            if connection_name == link_dict['to']:
-                                links_to = record_row.relationships[connection][connection_name]
+                        else:
+                            sheet.write(row, i, record_data)
+                    elif requrirement == "true":  # Print placeholders only if field is required
+                        if datatype == "number":
+                            sheet.write(row, i, -1)
+                        else:
+                            sheet.write(row, i, 'NA')
+                    # column += 1
+                for j in range(0, len(sheet_relationships['connections'])):
+                    link_dict = sheet_relationships['connections'][j]
+                    connection = link_dict['name']
+                    for connection_name in record_row.relationships[connection]:
+                        if connection_name == link_dict['to']:
+                            links_to = record_row.relationships[connection][connection_name]
 
-                        if len(links_to) > 0:
-                            sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
+                    if len(links_to) > 0:
+                        sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
 
     def Write_sheet(self, sheet_obj):
         pass
@@ -523,34 +507,57 @@ class Poster:
         full_list = response[categories]  # returns a list of existing records.
         return [x for x in full_list if x['user'] == user_name]
 
-    def fetch_cypher_out(self, json, sheet_name):
+    def read_cypher(self, json, sheet_name):
         """
-        temporarily use the downloaded json file as input for now.
+        temporarily use the downloaded json file as input for now, return a book_data obj.
         """
         meta_structure = self.meta_structure
-        with open(json, 'r') as file:
-            response = json.load(file)
-        sheet_record = SheetData(sheet_name, meta_structure)
-        for data in response['data']:
+        book_data = BookData(meta_structure)
+        sheet_data = SheetData(sheet_name, meta_structure)
+        book_data.add_sheet(sheet_data)
+        for data in json['data']:
             record = RowData(sheet_name, meta_structure)
-            record.schema = record["row"][0]
+            record.schema = data["row"][0]
             # initiate empty record relationship strcuture:
             for column_header in meta_structure.get_link_column_headers(sheet_name):
                 # do link stuff
                 column_name = meta_structure.get_column_name(sheet_name, column_header)
-                sheetlinkto = meta_structure.get_linkto(self.sheet_name, column_header)
+                sheetlinkto = meta_structure.get_linkto(sheet_name, column_header)
                 categorylinkto = meta_structure.get_category(sheetlinkto)
-                record.relationships[column_name] = {categorylinkto: []}
-            for connection in record["row"][1]:
-                record.relationships[connection['r']][connection['to']].append(connection['m'])  # may change r, to m to more meaningful variable names.
-            sheet_record.add_record(record)
-        return sheet_record
+                if column_name in record.relationships:
+                    record.relationships[column_name][categorylinkto] = []
+                else:
+                    record.relationships[column_name] = {categorylinkto: []}
+            for connection in data["row"][1]:
+                record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
+            sheet_data.add_record(record)
+        return book_data
 
     def fetch_submission(self, submission):
         """
         returns a workbook
         """
-        pass
+
+        meta_structure = self.meta_structure
+        book_data = BookData(meta_structure)
+        entries_string = submission["details"]
+        whole_data = json.loads(entries_string.replace("'", "\""))  # Gets a list of all accessions created for that object category
+        for sheet_name in meta_structure.schema_dict.keys():
+            sheet_data = SheetData(sheet_name, meta_structure)
+            book_data.add_sheet(sheet_data)
+            categories = meta_structure.get_categories(sheet_name)
+            # print category
+            logging.info("fetching data in sheet %s!" % sheet_name)
+            row = EXCEL_HEADER_ROW
+            if categories in whole_data:
+                entry_list = whole_data[categories]
+                for entry in entry_list:
+                    logging.info(entry)
+                    row += 1
+                    # record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json().get('mainObj')
+                    record_row = self.fetch_record(sheet_name, entry)  # A Rowdata obj.
+                    sheet_data.add_record(record_row)
+        return book_data
 
     def submit_record(self, row_data):
         """
