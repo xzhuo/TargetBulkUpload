@@ -1,4 +1,3 @@
-import metastructure
 class BookData:
     def __init__(self, meta_structure):
         self.meta_structure = meta_structure
