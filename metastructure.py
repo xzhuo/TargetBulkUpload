@@ -1,6 +1,15 @@
+import sys
+import requests
+
 ACCESSION_PLACEHOLDER_DIGITS = 3
+URL_META = 'http://target.wustl.edu:7006'
+URL_SUBMIT = 'http://target.wustl.edu:7002'
+TESTURL_META = 'http://target.wustl.edu:8006'
+TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
+
+
 class MetaStructure:
-    def __init__(self, url, all_categories, schema_string='/schema/', relationship_string='/schema/relationships/', version_string='/api/version'):
+    def __init__(self, is_production, all_categories, schema_string='/schema/', relationship_string='/schema/relationships/', version_string='/api/version'):
         """
         Set up metastructure.
 
@@ -68,7 +77,13 @@ class MetaStructure:
             ...
         }
         """
-        self.url = url
+        if is_production:
+            self.action_url_meta = URL_META
+            self.action_url_submit = URL_SUBMIT
+        else:
+            self.action_url_meta = TESTURL_META
+            self.action_url_submit = TESTURL_SUBMIT
+        self.url = self.action_url_meta
         self.category_to_sheet_name = self._set_category_to_sheet_name(all_categories)  # it is a dictionary
         self.schema_dict = self._url_to_json(schema_string)
         self.link_dict = self._url_to_json(relationship_string)
@@ -206,12 +221,13 @@ class MetaStructure:
         return new_dict
 
     def _set_category_to_sheet_name(self, all_categories):  # it is a dictionary
-        return {k:k.lower().title() for k in all_categories}
+        return {k: k.lower().title() for k in all_categories}
 
     def _set_version(self, version_string):
         """ Giver a version string (part of the url), returns the latested database structure version."""
         full_url = self.url + version_string
         return requests.get(full_url).json()
+
     def _get_column_info(self, sheet_name, column_header, info):
         """
         Given a excel sheet name and a column displayname (column_header), returns desired infomation.

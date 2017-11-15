@@ -1,31 +1,31 @@
-import metastructure
+import sys
+import json
+import requests
+import logging
+
 import bookdata
 import sheetdata
 import rowdata
-URL_META = 'http://target.wustl.edu:7006'
-URL_SUBMIT = 'http://target.wustl.edu:7002'
-TESTURL_META = 'http://target.wustl.edu:8006'
-TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
+
+TIMEOUT = 10
+
+
 class Poster:
     def __init__(self, token, isupdate, is_production, meta_structure):
         self.token = token
         self.token_key = 'bearer ' + token
         self.isupdate = isupdate
         self.is_production = is_production
-        if is_production:
-            self.action_url_meta = URL_META
-            self.action_url_submit = URL_SUBMIT
-        else:
-            self.action_url_meta = TESTURL_META
-            self.action_url_submit = TESTURL_SUBMIT
         self.meta_structure = meta_structure
+        self.meta_url = self.meta_structure.action_url_meta
+        self.submit_url = self.meta_structure.action_url_submit
         self.token_header = {"Authorization": self.token_key}
         if token != '':
             self.user_name = self.set_username()
 
     def set_username(self):
         token_url = self.submit_url + '/api/usertoken/' + self.token
-        return requests.get(token_url).json()["username"]
+        return requests.get(token_url, timeout=TIMEOUT).json()["username"]
 
     def get_sheet_info(self, sheet_name):
         meta_url = self.meta_url
@@ -36,7 +36,7 @@ class Poster:
     def fetch_record(self, sheet_name, system_accession):
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         get_url = meta_url + '/api/' + categories + '/' + system_accession
-        main_obj = requests.get(get_url).json()["mainObj"]
+        main_obj = requests.get(get_url, timeout=TIMEOUT).json()["mainObj"]
         record = rowdata.RowData(sheet_name, self.meta_structure)
         record.schema = main_obj[category]
         record.relationships = main_obj["added"]
@@ -46,7 +46,7 @@ class Poster:
         meta_url, category, categories = self.get_sheet_info(sheet_name)
         user_name = self.user_name
         get_url = self.meta_url + '/api/' + categories
-        response = requests.get(get_url).json()
+        response = requests.get(get_url, timeout=TIMEOUT).json()
         full_list = response[categories]  # returns a list of existing records.
         return [x for x in full_list if x['user'] == user_name]
 
@@ -141,7 +141,7 @@ class Poster:
         if valid:
             post_body = row_data.schema
             accession = row_data.remove("accession")  # it is essentially a dict pop.
-            response = requests.post(post_url, headers=self.token_header, data=post_body).json()
+            response = requests.post(post_url, headers=self.token_header, data=post_body, timeout=TIMEOUT).json()
 
             if response['statusCode'] == 200:
                 # save the submission:
@@ -201,19 +201,20 @@ class Poster:
         """
         direction is either "remove" or "add"
         """
-        if is_add:
-            direction = "add"
-        else:
-             direction = "remove"
-        meta_url, category, categories = self.get_sheet_info(sheet_name)
-        linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
-        link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
-        response = requests.post(linkurl, headers=self.token_header, data=link_body).json()
-        if response["statusCode"] == 200:
-            print("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
-        else:
-            print("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
-            print(response["message"])
+        if linkto_accession != "":  # skip empty accessions.
+            if is_add:
+                direction = "add"
+            else:
+                direction = "remove"
+            meta_url, category, categories = self.get_sheet_info(sheet_name)
+            linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
+            link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
+            response = requests.post(linkurl, headers=self.token_header, data=link_body, timeout=TIMEOUT).json()
+            if response["statusCode"] == 200:
+                print("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+            else:
+                print("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+                print(response["message"])
 
     def save_submission(self, book_data):
         isupdate = self.isupdate
@@ -230,7 +231,7 @@ class Poster:
         saved_submission_url = self.submit_url + "/api/submission"
         if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
             submission_body = {"details": json.dumps(submission_log), "update": isupdate}
-            submitted_response = requests.post(saved_submission_url, headers=self.token_header, data=submission_body).json()
+            submitted_response = requests.post(saved_submission_url, headers=self.token_header, data=submission_body, timeout=TIMEOUT).json()
             if submitted_response["statusCode"] == 201:
                 logging.info("Submission has been successfully saved as %s!" % submitted_response["submission_id"])
             else:

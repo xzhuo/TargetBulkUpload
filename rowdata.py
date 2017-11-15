@@ -1,7 +1,8 @@
+import sys
+import uuid  # used to generate unique user accesion if it is not provided.
+
+
 class RowData:
-    CTYPE_NUMBER = 2
-    CTYPE_DATE = 3
-    CTYPE_BOOLEAN = 4
     def __init__(self, sheet_name, meta_structure):
         self.sheet_name = sheet_name
         self.meta_structure = meta_structure
@@ -72,51 +73,3 @@ class RowData:
             new_user_accession = user_accession_rule + str(randomid)
         self.old_accession(self.schema["user_accession"])
         self.schema["user_accession"] = new_user_accession
-
-    def validate_add(self, column_header, cell_obj, datemode):
-        """
-        :param: column_header - the column_header of the cell you want to add.
-        :param: cell_obj - the cell object from xrld package.
-        :validate and add the cell value to the row_data:
-        modify some invalid value in excel sheet to match database requirement.
-        empty accessions ("" or "NA") become "".
-        "NA" for date become 1970-01-01.
-        "NA" in number fields become -1.
-        all float value round to 2 digits.
-        """
-        value = cell_obj.value
-        ctype = cell_obj.ctype
-        data_type = self.meta_structure.get_data_type(self.sheet_name, column_header)
-        # Now begin validation:
-        # ipdb.set_trace()
-        if column_header == "User accession" and (value == "NA" or value == ""):  # always us "" if user accession is empty or NA
-            value = ""
-        elif column_header == "System Accession" and (value == "NA" or value == ""):  # always us "" if sys accession is empty or NA
-            value = ""
-        elif ctype == CTYPE_BOOLEAN:
-            if value:
-                value = "TRUE"
-            else:
-                value = "FALSE"
-        # now consider data_type:
-        elif data_type == "text" and ctype == CTYPE_NUMBER:
-            value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
-        elif data_type == "date":
-            if value == "NA" or value == "":
-                value = '1970-01-01'
-            elif ctype == CTYPE_DATE:
-                value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
-        elif data_type == "number":
-            if ctype == CTYPE_NUMBER:
-                value = round(value, 2)
-            elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
-                value = -1
-                logging.info("Change NA to -1 for %s in %s." % (column_header, self.sheet_name))
-            else:
-                sys.exit("please use number for %s in %s" % (column_header, self.sheet_name))
-        elif data_type == "textnumber":
-            if ctype == CTYPE_NUMBER:
-                value = round(value, 2)
-
-        # Convert "NA" to "" for link columns occurs in the self.add method.
-        self.add(column_header, value)  # or use columan display name?
