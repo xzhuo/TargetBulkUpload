@@ -11,8 +11,6 @@ import poster
 import validator
 import bookdata
 
-ALL_CATEGORIES = ["assay", "bioproject", "biosample", "diet", "experiment", "file", "lab", "library", "litter", "mouse", "reagent", "treatment", "mergedFile"]
-
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -96,7 +94,7 @@ def main():
 
     is_production = args.isproduction
 
-    meta_structure = metastructure.MetaStructure(is_production, ALL_CATEGORIES)
+    meta_structure = metastructure.MetaStructure(is_production)
     # meta_structure.isupdate(args.isupdate)
     # meta_structure.isproduction(args.isproduction)
     # These options no longer saved in meta_structure
@@ -131,8 +129,7 @@ class SubmissionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("setUpClass runs before ALL tests")
-        is_production = False
-        meta_structure = metastructure.MetaStructure(is_production, ALL_CATEGORIES)
+        meta_structure = metastructure.MetaStructure()
         # meta_structure.isupdate(args.isupdate)
         # meta_structure.isproduction(args.isproduction)
         # These options no longer saved in meta_structure

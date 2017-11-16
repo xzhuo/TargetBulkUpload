@@ -6,10 +6,11 @@ URL_META = 'http://target.wustl.edu:7006'
 URL_SUBMIT = 'http://target.wustl.edu:7002'
 TESTURL_META = 'http://target.wustl.edu:8006'
 TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
+ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile", "experiment",]
 
 
 class MetaStructure:
-    def __init__(self, is_production, all_categories, schema_string='/schema/', relationship_string='/schema/relationships/', version_string='/api/version'):
+    def __init__(self, is_production=False, all_categories=ALL_CATEGORIES, schema_string='/schema/', relationship_string='/schema/relationships/', version_string='/api/version'):
         """
         Set up metastructure.
 
