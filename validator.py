@@ -1,4 +1,3 @@
-import sys
 import pprint
 import logging
 import xlrd
@@ -55,7 +54,8 @@ class Validator:
         existing_sheet_data = poster.fetch_all(sheet_name)
         existing_user_accessions = [x['user_accession'] for x in existing_sheet_data]
         if len(existing_user_accessions) != len(set(existing_user_accessions)):
-            sys.exit("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
+            raise ValidatorError("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
+            # sys.exit("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
         existing_user_system_accession_pair = {x["user_accession"]: x["accession"] for x in existing_sheet_data}  # python2.7+
         existing_system_accessions = existing_user_system_accession_pair.values()
         # FIMXE user_accessions_in_sheet = Set(...)
@@ -77,23 +77,22 @@ class Validator:
                         user_accession_list.append(user_accession)
                         system_accession_list.append(accession)
                     else:
-                        #FIXME instead of sys.exit,
-                        # raise ValidationError("message"), then catch in main
-                        sys.exit("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
+                        raise ValidatorError("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
+                        # sys.exit("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
                 else:
-                    sys.exit("accession %s or %s in %s does not match our database record!" % (user_accession, accession, sheet_name))
+                    raise ValidatorError("accession %s or %s in %s does not match our database record!" % (user_accession, accession, sheet_name))
             elif user_accession == "" and accession != "":
                 if accession in system_accession_list:
-                    sys.exit("System accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (accession, sheet_name))
+                    raise ValidatorError("System accession %s in %s in invalid. It is a redundant accession in the worksheet." % (accession, sheet_name))
                 elif accession not in existing_system_accessions:
-                    sys.exit("System accession %s in %s in invalid. It does not exist in the database." % (accession, sheet_name))
+                    raise ValidatorError("System accession %s in %s in invalid. It does not exist in the database." % (accession, sheet_name))
                 else:
                     matching_user_accession = [k for k, v in existing_user_system_accession_pair.items() if v == accession][0]
                     user_accession_list.append(matching_user_accession)
                     system_accession_list.append(accession)
             elif user_accession != "" and accession == "":
                 if user_accession in user_accession_list:
-                    sys.exit("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
+                    raise ValidatorError("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
                 elif user_accession in existing_user_accessions:
                     matching_accession = existing_user_system_accession_pair[user_accession]
                     user_accession_list.append(user_accession)
@@ -101,7 +100,7 @@ class Validator:
                 else:
                     user_accession_list.append(user_accession)
             else:
-                raise Error("The code should never reach this point")
+                raise ValidatorError("Unexpected validation error")
 
     def cell_value_audit(self, sheet_name, column_header, cell_obj, datemode):
         """
@@ -144,7 +143,7 @@ class Validator:
                 value = -1
                 logging.info("Change NA to -1 for %s in %s." % (column_header, sheet_name))
             else:
-                sys.exit("please use number for %s in %s" % (column_header, sheet_name))
+                raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
         elif data_type == "textnumber":
             if ctype == CTYPE_NUMBER:
                 value = round(value, 2)
@@ -181,8 +180,7 @@ class Validator:
             elif row_data.schema["technique"] != "ATAC-seq" and row_data.relationships["assay_input"]["biosample"] == [""]:
                 valid = True
             else:
-                import ipdb; ipdb.set_trace()
-                logging.error("ATAC-seq assay record can only connect to biosample, other type assay record can only connect to library.\n\
+                raise ValidatorError("ATAC-seq assay record can only connect to biosample, other type assay record can only connect to library.\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
         elif sheet_name == "File":  # paired end information
             if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "" and row_data.relationships["paired_file"]["file"] == [""]:
@@ -190,8 +188,13 @@ class Validator:
             elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "" and row_data.relationships["paired_file"]["file"] != [""]:
                 valid = True
             else:
-                logging.error("column Pair and Paired file must be blank for single end records, but they are required for paired end records.\n\
+                raise ValidatorError("column Pair and Paired file must be blank for single end records, but they are required for paired end records.\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
         else:
-            logging.warning("record %s %s in %s is not valid and will be skipped!" % (system_accession, user_accession, sheet_name))
+            raise ValidatorError("record %s %s in %s is not valid and will be skipped!" % (system_accession, user_accession, sheet_name))
         return valid
+
+
+class ValidatorError(Exception):
+    """catch my validation errors"""
+    pass

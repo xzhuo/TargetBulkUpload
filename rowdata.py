@@ -1,4 +1,3 @@
-import sys
 import uuid  # used to generate unique user accesion if it is not provided.
 
 
@@ -28,7 +27,7 @@ class RowData:
         elif column_header in meta_structure.get_schema_column_headers(sheet_name):
             self.schema[column_name] = value
         else:
-            sys.exit("unknown column %s in %s!" % (column_header, sheet_name))
+            raise RowError("unknown column %s in %s!" % (column_header, sheet_name))
 
     def remove(self, column_name):
         """
@@ -37,7 +36,7 @@ class RowData:
         if column_name in self.schema:
             return self.schema.pop(column_name)
         else:
-            sys.exit("remove method can only delete schema columns, but you are trying to delete %s in %s" % (column_name, self.sheet_name))
+            raise RowError("remove method can only delete schema columns, but you are trying to delete %s in %s" % (column_name, self.sheet_name))
 
     def old_accession(self, old_accession=""):
         # redundant with submission, but seems it is bad idea to make mutable attribes.
@@ -73,3 +72,8 @@ class RowData:
             new_user_accession = user_accession_rule + str(randomid)
         self.old_accession(self.schema["user_accession"])
         self.schema["user_accession"] = new_user_accession
+
+
+class RowError:
+    """Errors process row data in excel file"""
+    pass

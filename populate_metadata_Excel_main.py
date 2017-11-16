@@ -6,12 +6,11 @@
 
 
 import sys
+import logging
 import requests
 import xlsxwriter
 import json
 import argparse
-import datetime
-import logging
 import metastructure
 import sheetreader
 import poster
@@ -57,9 +56,14 @@ def get_args():
 
 def main():
     args = get_args()
+    logging.getLogger().setLevel(logging.INFO)
     is_production = args.is_production or args.notest
 
-    meta_structure = metastructure.MetaStructure(is_production)
+    try:
+        meta_structure = metastructure.MetaStructure(is_production)
+    except metastructure.StructureError as structure_error:
+        sys.exit(structure_error)
+
     # meta_structure = submission_oo.MetaStructure.start_metastructure(is_production, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
     version_dict = meta_structure.version
     version = version_dict['current']

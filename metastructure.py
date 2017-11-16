@@ -1,4 +1,3 @@
-import sys
 import requests
 
 ACCESSION_PLACEHOLDER_DIGITS = 3
@@ -210,7 +209,7 @@ class MetaStructure:
             category = [x["to"] for x in link["connections"] if x["display_name"] == column_header][0]
             return self.category_to_sheet_name[category]
         else:
-            sys.exit("%s in %s is not a connection column" % (column_header, sheet_name))
+            raise StructureError("%s in %s is not a connection column" % (column_header, sheet_name))
 
     def _url_to_json(self, string):
         """Fetch the data from a url and get a dictionary or a list."""
@@ -247,5 +246,10 @@ class MetaStructure:
                 info_list = [x[info] for x in self.get_sheet_link(sheet_name)["connections"] if x["display_name"] == column_header]
                 info = info_list[0]
         else:
-            sys.exit("unknow info %s of %s in %s" % (info, column_header, sheet_name))
+            raise StructureError("unknow info %s of %s in %s" % (info, column_header, sheet_name))
         return info
+
+
+class StructureError:
+    """To capture error in metastructure"""
+    pass

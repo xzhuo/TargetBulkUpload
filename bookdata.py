@@ -41,5 +41,3 @@ class BookData:
                         for index, accession in enumerate(accession_list):
                             if accession in accession_table:
                                 accession_list[index] = accession_table[accession]
-
-#FIXME Put all validation in class SheetValidator or whatever you want to call it

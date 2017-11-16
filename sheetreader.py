@@ -40,8 +40,15 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 # islink = SheetData.islink(column_header)
                 cell_obj = sheet_obj.cell(row_index, col_index)  # the cell obj from xlrd
                 value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
-                row_data.add(column_header, value)
-            if data_validator.row_value_audit(row_data):
+                try:
+                    row_data.add(column_header, value)
+                except row_data.RowError as row_error:
+                    raise row_data.RowError(row_error)
+            try:
+                valid = data_validator.row_value_audit(row_data)
+            except validator.ValidatorError as validator_error:
+                raise validator.ValidatorError(validator_error)
+            if valid:
                 sheet_data.add_record(row_data)
         return sheet_data
 
@@ -128,13 +135,13 @@ class SheetReader:  # Of cause, the Reader can write, too.
         date_format = workbook.add_format({'num_format': 'mm/dd/yy'})  # Format for date fields
         for sheet_name, sheet_data in book_data.data.items():
             # print category
-            logging.info("filling data in sheet %s!" % sheet_name)
             sheet_schema = meta_structure.get_sheet_schema(sheet_name)
             sheet_relationships = meta_structure.get_sheet_link(sheet_name)
             sheet = workbook.get_worksheet_by_name(sheet_name)
-            row = self.excel_header_row
-            for record_row in sheet_data.all_records:
-                row += 1
+            total_rows = len(sheet_data.all_records)
+            for record_count, record_row in enumerate(sheet_data.all_records):
+                row = record_count + self.excel_data_start_row
+                logging.info("Printing %d of %d rows in excel sheet %s" % (record_count + 1, total_rows, sheet_name))
                 for i in range(0, len(sheet_schema)):
                     column_dict = sheet_schema[i]
                     field = column_dict['name']
@@ -155,7 +162,7 @@ class SheetReader:  # Of cause, the Reader can write, too.
                             sheet.write(row, i, -1)
                         else:
                             sheet.write(row, i, 'NA')
-                    # column += 1
+
                 for j in range(0, len(sheet_relationships['connections'])):
                     link_dict = sheet_relationships['connections'][j]
                     connection = link_dict['name']

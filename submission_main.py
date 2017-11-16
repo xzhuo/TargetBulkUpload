@@ -94,7 +94,10 @@ def main():
 
     is_production = args.isproduction
 
-    meta_structure = metastructure.MetaStructure(is_production)
+    try:
+        meta_structure = metastructure.MetaStructure(is_production)
+    except metastructure.StructureError as structure_error:
+        sys.exit(structure_error)
     # meta_structure.isupdate(args.isupdate)
     # meta_structure.isproduction(args.isproduction)
     # These options no longer saved in meta_structure
@@ -110,9 +113,13 @@ def main():
             continue
         sheet_obj = workbook.sheet_by_name(sheet_name)
         data_validator = validator.Validator(meta_structure)
+
         data_validator.verify_column_names(sheet_obj)
         sheet_data = reader.read_sheet(sheet_obj, workbook.datemode)
-        data_validator.duplication_check(db_poster, sheet_data)
+        try:
+            data_validator.duplication_check(db_poster, sheet_data)
+        except validator.ValidatorError as validator_error:
+            sys.exit(validator_error)
         # Now upload all the records on sheet_data:
         for record in sheet_data.all_records:
             db_poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
