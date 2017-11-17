@@ -28,12 +28,12 @@ def get_args():
         help="submission id. If provided, it will fetch the specific submission. Without it it will produce an empty excel template.\n",
     )
     parser.add_argument(
-        '--cypher',
-        '-c',
+        '--user',
+        '-u',
         action="store",
-        dest="cypher",
+        dest="user",
         required=False,
-        help="cypher query.\n",
+        help="cypher query fetch all record for a user.\n",
     )
     parser.add_argument(
         '--notest',
@@ -82,12 +82,14 @@ def main():
         book_data = db_poster.fetch_submission(submission)
         reader.write_book(workbook, book_data)
         workbook.close()
-    elif args.cypher:
-        workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + 'cypher_test' + version + '.xlsx')  # The submission should be extracted, replace url
+    elif args.user:
+        user = args.user
+        workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + user + '-V' + version + '.xlsx')  # The submission should be extracted, replace url
         reader.write_book_header(workbook)
-        with open(args.cypher, 'r') as file:
-            cypher_json = json.load(file)
-        book_data = db_poster.read_cypher(cypher_json, 'Assay')
+        # with open(args.cypher, 'r') as file:
+        #     cypher_json = json.load(file)
+        # book_data = db_poster.read_cypher(cypher_json, 'Assay')
+        book_data = db_poster.fetch_user_all(user)
         reader.write_book(workbook, book_data)
         workbook.close()
     else:
