@@ -40,14 +40,9 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 # islink = SheetData.islink(column_header)
                 cell_obj = sheet_obj.cell(row_index, col_index)  # the cell obj from xlrd
                 value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
-                try:
-                    row_data.add(column_header, value)
-                except row_data.RowError as row_error:
-                    raise row_data.RowError(row_error)
-            try:
-                valid = data_validator.row_value_audit(row_data)
-            except validator.ValidatorError as validator_error:
-                raise validator.ValidatorError(validator_error)
+                row_data.add(column_header, value)
+
+            valid = data_validator.row_value_audit(row_data)
             if valid:
                 sheet_data.add_record(row_data)
         return sheet_data

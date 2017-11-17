@@ -1,4 +1,3 @@
-import sys
 import json
 import requests
 import logging
@@ -83,38 +82,26 @@ class Poster:
         meta_structure = self.meta_structure
         statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
         post_url = "http://10.20.127.32:8474/db/data/cypher"
-        cypher_header = {
-                            'accept': "application/json, text/plain, */*",
-                            'x-stream': "true",
-                            'content-type': "application/json;charset=utf-8",
-                            'authorization': "Basic bmVvNGo6REVWMg==",
-                        }
+        cypher_header = {'accept': "application/json, text/plain, */*",
+                         'x-stream': "true",
+                         'content-type': "application/json;charset=utf-8",
+                         'authorization': "Basic bmVvNGo6REVWMg==",
+                         }
         book_data = bookdata.BookData(meta_structure)
         for category, sheet_name in meta_structure.category_to_sheet_name.items():
-            logging.info("Fetching %s" % sheet_name)
-            post_body = {"query": statement,
-                        "params":{
-                                    "name": user,
-                                    "tab": category
-                                  },
-                        "includeStats": "true"
-                        }
-            try:
-                r = requests.post(post_url, headers=cypher_header, data=json.dumps(post_body), timeout=TIMEOUT)
-                r.raise_for_status()
-            except requests.exceptions.HTTPError as errh:
-                print("Http Error:", errh)
-            except requests.exceptions.ConnectionError as errc:
-                print("Error Connecting:", errc)
-            except requests.exceptions.Timeout as errt:
-                print("Timeout Error:", errt)
-            except requests.exceptions.RequestException as err:
-                print("post request of %s %s in %s failed!" % (accession, user_accession, sheet_name))
-                print(err)
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
             book_data.add_sheet(sheet_data)
+            logging.info("Fetching %s" % sheet_name)
+            post_body = {"query": statement,
+                         "params": {"name": user,
+                                    "tab": category
+                                    },
+                         "includeStats": "true"
+                         }
+            response = self._post(post_url, headers=cypher_header, data=json.dumps(post_body))
+
             # import ipdb; ipdb.set_trace()
-            for data in r.json()['data']:
+            for data in response['data']:
                 if data[0] is not None:
                     record = rowdata.RowData(sheet_name, meta_structure)
                     record.schema = data[0]["data"]
@@ -199,20 +186,7 @@ class Poster:
         if valid:
             post_body = row_data.schema
             accession = row_data.remove("accession")  # it is essentially a dict pop.
-            try:
-                r = requests.post(post_url, headers=self.token_header, data=post_body, timeout=TIMEOUT)
-                r.raise_for_status()
-            except requests.exceptions.HTTPError as errh:
-                print("Http Error:", errh)
-            except requests.exceptions.ConnectionError as errc:
-                print("Error Connecting:", errc)
-            except requests.exceptions.Timeout as errt:
-                print("Timeout Error:", errt)
-            except requests.exceptions.RequestException as err:
-                print("post request of %s %s in %s failed!" % (accession, user_accession, sheet_name))
-                print(err)
-
-            response = r.json()
+            response = self._post(post_url, headers=self.token_header, data=post_body)
 
             # save the submission:
             if response["statusCode"] == 200:
@@ -280,20 +254,8 @@ class Poster:
             meta_url, category, categories = self.get_sheet_info(sheet_name)
             linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
             link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
-            try:
-                r = requests.post(linkurl, headers=self.token_header, data=link_body, timeout=TIMEOUT)
-                r.raise_for_status()
-            except requests.exceptions.HTTPError as errh:
-                print("Http Error:", errh)
-            except requests.exceptions.ConnectionError as errc:
-                print("Error Connecting:", errc)
-            except requests.exceptions.Timeout as errt:
-                print("Timeout Error:", errt)
-            except requests.exceptions.RequestException as err:
-                print("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
-                print(err)
+            response = self._post(linkurl, headers=self.token_header, data=link_body)
 
-            response = r.json()
             if response["statusCode"] == 200:
                 logging.info("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
             else:
@@ -315,20 +277,24 @@ class Poster:
         saved_submission_url = self.submit_url + "/api/submission"
         if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
             submission_body = {"details": json.dumps(submission_log), "update": isupdate}
-            try:
-                r = requests.post(saved_submission_url, headers=self.token_header, data=submission_body, timeout=TIMEOUT)
-                r.raise_for_status()
-            except requests.exceptions.HTTPError as errh:
-                print("Http Error:", errh)
-            except requests.exceptions.ConnectionError as errc:
-                print("Error Connecting:", errc)
-            except requests.exceptions.Timeout as errt:
-                print("Timeout Error:", errt)
-            except requests.exceptions.RequestException as err:
-                print(err)
+            submitted_response = self._post(saved_submission_url, headers=self.token_header, data=submission_body)
 
-            submitted_response = r.json()
             if submitted_response["statusCode"] == 201:
                 logging.info("Submission has been successfully saved as %s!" % submitted_response["submission_id"])
             else:
                 logging.error("Fail to save submission!")
+
+    def _post(self, url, headers, data, timeout=TIMEOUT):
+        try:
+            r = requests.post(url, headers=headers, data=data, timeout=timeout)
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as errh:
+            print("Http Error:", errh)
+        except requests.exceptions.ConnectionError as errc:
+            print("Error Connecting:", errc)
+        except requests.exceptions.Timeout as errt:
+            print("Timeout Error:", errt)
+        except requests.exceptions.RequestException as err:
+            print(err)
+        response = r.json()
+        return response
