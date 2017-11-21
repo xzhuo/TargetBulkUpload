@@ -175,9 +175,9 @@ class Validator:
         elif user_accession == "" and system_accession.startswith(system_accession_rule):
             valid = True
         elif sheet_name == 'Assay':  # ATAC-seq links to biosample, others link to library
-            if row_data.schema["technique"] == "ATAC-seq" and row_data.relationships["assay_input"]["library"] == [""]:
+            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "CHIP-seq") and row_data.relationships["assay_input"]["library"] == [""]:
                 valid = True
-            elif row_data.schema["technique"] != "ATAC-seq" and row_data.relationships["assay_input"]["biosample"] == [""]:
+            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "CHIP-seq" and row_data.relationships["assay_input"]["biosample"] == [""]:
                 valid = True
             else:
                 raise ValidatorError("ATAC-seq assay record can only connect to biosample, other type assay record can only connect to library.\n\
