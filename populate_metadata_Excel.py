@@ -36,6 +36,14 @@ def get_args():
         help="cypher query fetch all record for a user.\n",
     )
     parser.add_argument(
+        '--tokenkey',
+        '-k',
+        action="store",
+        dest="token",
+        required=False,
+        help="User's API key. Not required for populate script. But need this for cypher query.\n",
+    )
+    parser.add_argument(
         '--notest',
         '-n',
         action="store_true",
@@ -67,7 +75,10 @@ def main():
     # meta_structure = submission_oo.MetaStructure.start_metastructure(is_production, ALL_CATEGORIES, SCHEMA_STRING, RELATIONSHIP_STRING, VERSION_STRING)
     version_dict = meta_structure.version
     version = version_dict['current']
-    db_poster = poster.Poster('', '', is_production, meta_structure)
+    token = ''
+    if args.token:
+        token = args.token
+    db_poster = poster.Poster(token, '', is_production, meta_structure)
     reader = sheetreader.SheetReader(meta_structure)
     if args.submission:
         # Retrieve submission JSON

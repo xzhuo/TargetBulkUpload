@@ -7,22 +7,26 @@ import sheetdata
 import rowdata
 
 TIMEOUT = 10
+PROD_URL = "http://10.20.127.31:6474/db/data/cypher"
+DEV_URL = "http://10.20.127.32:8474/db/data/cypher"
 
 
 class Poster:
     def __init__(self, token, isupdate, is_production, meta_structure):
         self.token = token
         self.token_key = 'bearer ' + token
+        self.neo4j_key = 'Basic ' + token
         self.isupdate = isupdate
         self.is_production = is_production
         self.meta_structure = meta_structure
         self.meta_url = self.meta_structure.action_url_meta
         self.submit_url = self.meta_structure.action_url_submit
         self.token_header = {"Authorization": self.token_key}
-        if token != '':
-            self.user_name = self.set_username()
+        # if token != '':
+        #     self.user_name = self.set_username()
 
     def set_username(self):
+        ''' Set user name based on the token key. However, an error would occur if the token key is neo4j token'''
         token_url = self.submit_url + '/api/usertoken/' + self.token
         return requests.get(token_url, timeout=TIMEOUT).json()["username"]
 
@@ -43,7 +47,7 @@ class Poster:
 
     def fetch_all(self, sheet_name):
         meta_url, category, categories = self.get_sheet_info(sheet_name)
-        user_name = self.user_name
+        user_name = self.set_username()
         get_url = self.meta_url + '/api/' + categories
         response = requests.get(get_url, timeout=TIMEOUT).json()
         full_list = response[categories]  # returns a list of existing records.
@@ -81,11 +85,14 @@ class Poster:
         """
         meta_structure = self.meta_structure
         statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
-        post_url = "http://10.20.127.32:8474/db/data/cypher"
+        if self.is_production:
+            post_url = PROD_URL
+        else:
+            post_url = DEV_URL
         cypher_header = {'accept': "application/json, text/plain, */*",
                          'x-stream': "true",
                          'content-type': "application/json;charset=utf-8",
-                         'authorization': "Basic bmVvNGo6REVWMg==",
+                         'authorization': self.neo4j_key,
                          }
         book_data = bookdata.BookData(meta_structure)
         for category, sheet_name in meta_structure.category_to_sheet_name.items():
