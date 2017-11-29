@@ -85,6 +85,7 @@ class Poster:
         """
         meta_structure = self.meta_structure
         statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
+        no_relation_statment = "OPTIONAL MATCH (n)-[r*0..1]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, [] as added ORDER BY n.accession"
         if self.is_production:
             post_url = PROD_URL
         else:
@@ -96,6 +97,8 @@ class Poster:
                          }
         book_data = bookdata.BookData(meta_structure)
         for category, sheet_name in meta_structure.category_to_sheet_name.items():
+            if category == "mergedFile":
+                statement = no_relation_statment
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
             book_data.add_sheet(sheet_data)
             logging.info("Fetching %s" % sheet_name)
