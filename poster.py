@@ -235,8 +235,8 @@ class Poster:
                 except:
                     print("unable to update different kinds of records %s in %s!" % (system_accession, sheet_name))
                 # only change accession difference.
-                to_remove = new_accession_set - existing_accession_set
-                to_add = existing_accession_set - new_accession_set
+                to_add = new_accession_set - existing_accession_set
+                to_remove = existing_accession_set - new_accession_set
                 for linkto_accession in to_remove:
                     self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=False)
                 for linkto_accession in to_add:
@@ -266,7 +266,10 @@ class Poster:
             response = self._post(linkurl, headers=self.token_header, data=link_body)
 
             if response["statusCode"] == 200:
-                logging.info("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+                if is_add:
+                    logging.info("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+                else:
+                    logging.info("successfully removed relationship from %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
             else:
                 logging.error("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
                 logging.error(response["message"])
