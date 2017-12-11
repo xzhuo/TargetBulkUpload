@@ -56,11 +56,12 @@ class SheetReader:  # Of cause, the Reader can write, too.
         # Create Instructions worksheet
         sheet0 = workbook.add_worksheet('Instructions')
         sheet0.write(0, 0, 'Version ' + version)  # This will need to come from URL, not hardcoded
-        sheet0.write(1, 0, 'Updated Aug 29, 2017')
-        sheet0.write(2, 0, 'Note: All fields except System Accession and User Accession are required unless otherwise specified.')
-        sheet0.write(3, 0, 'Note: User Accessions are placeholders used to link entries together prior to submission. They must follow the specified format (e.g, URSBPRxxx) and be unique within this workbook. Once submitted, each entry will be automatically assigned a System Accession (e.g., TRGTBPRxxx). Metadata can be updated by resubmitting entries with the System Accession field populated.')
+        sheet0.write(1, 0, 'Updated Dec 11, 2017')
+        sheet0.write(2, 0, 'Note: All fields except System Accession are required unless otherwise specified.')
+        sheet0.write(3, 0, 'Note: User Accessions are unique accessions assigned by the user. They must follow the specified format (e.g, URSBPRxxx) and be unique for all your records. Once submitted, each entry will be automatically assigned a System Accession (e.g., TRGTBPRxxx). Metadata can be updated by resubmitting entries with the System Accession field populated.')
         sheet0.write(4, 0, 'Note: Required metadata fields are colored gold, while optional fields are orange. Metadata connections are colored blue. To create a connection, specify the accession (user or system) of the object you wish to link to.')
-        sheet0.write(5, 0, 'Note: Experiments organize data files within the Data Portal. Please group together technical replicates within a single Experiment.')
+        sheet0.write(5, 0, 'Note: In file tab, paired-end files must have column Pair and column Paired file filled in.')
+        sheet0.write(6, 0, 'Note: Experiments organize data files within the Data Portal. Please group together technical replicates within a single Experiment.')
 
         # Create Lists worksheet
         sheet1 = workbook.add_worksheet('Lists')
