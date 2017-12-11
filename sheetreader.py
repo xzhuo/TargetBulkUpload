@@ -60,8 +60,8 @@ class SheetReader:  # Of cause, the Reader can write, too.
         sheet0.write(2, 0, 'Note: All fields except System Accession are required unless otherwise specified.')
         sheet0.write(3, 0, 'Note: User Accessions are unique accessions assigned by the user. They must follow the specified format (e.g, URSBPRxxx) and be unique for all your records. Once submitted, each entry will be automatically assigned a System Accession (e.g., TRGTBPRxxx). Metadata can be updated by resubmitting entries with the System Accession field populated.')
         sheet0.write(4, 0, 'Note: Required metadata fields are colored gold, while optional fields are orange. Metadata connections are colored blue. To create a connection, specify the accession (user or system) of the object you wish to link to.')
-        sheet0.write(5, 0, 'Note: In file tab, paired-end files must have column Pair and column Paired file filled in.')
-        sheet0.write(6, 0, 'Note: Experiments organize data files within the Data Portal. Please group together technical replicates within a single Experiment.')
+        sheet0.write(5, 0, 'In the File tab, you must complete the fields Pair and Paired file for paired-end files.')
+        sheet0.write(6, 0, 'Note: By default, paired files and sequencing replicates will be organized into a single Experiment in the data portal. You can overwrite this organization using the Experiment tab. However, it is not required.')
 
         # Create Lists worksheet
         sheet1 = workbook.add_worksheet('Lists')
