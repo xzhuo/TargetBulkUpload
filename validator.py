@@ -88,6 +88,7 @@ class Validator:
                     raise ValidatorError("System accession %s in %s in invalid. It does not exist in the database." % (accession, sheet_name))
                 else:
                     matching_user_accession = [k for k, v in existing_user_system_accession_pair.items() if v == accession][0]
+                    record.schema["user_accession"] = matching_user_accession
                     user_accession_list.append(matching_user_accession)
                     system_accession_list.append(accession)
             elif user_accession != "" and accession == "":
@@ -95,6 +96,7 @@ class Validator:
                     raise ValidatorError("User accession %s in %s in invalid. It is a redundant accesion in the worksheet." % (user_accession, sheet_name))
                 elif user_accession in existing_user_accessions:
                     matching_accession = existing_user_system_accession_pair[user_accession]
+                    record.schema["accession"] = matching_accession
                     user_accession_list.append(user_accession)
                     system_accession_list.append(matching_accession)
                 else:

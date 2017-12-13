@@ -93,7 +93,7 @@ def main():
         sys.exit("please provide a user API key!")  # make token argument mandatory.
 
     is_production = args.isproduction
-
+    is_update = args.isupdate
     try:
         meta_structure = metastructure.MetaStructure(is_production)
     except metastructure.StructureError as structure_error:
@@ -103,7 +103,7 @@ def main():
     # These options no longer saved in meta_structure
 
     reader = sheetreader.SheetReader(meta_structure)
-    db_poster = poster.Poster(args.token, args.isupdate, is_production, meta_structure)
+    db_poster = poster.Poster(args.token, is_update, is_production, meta_structure)
 
     workbook = xlrd.open_workbook(args.excel)
     book_data = bookdata.BookData(meta_structure)
