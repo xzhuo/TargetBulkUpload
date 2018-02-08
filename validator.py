@@ -176,14 +176,29 @@ class Validator:
             valid = True
         elif user_accession == "" and system_accession.startswith(system_accession_rule):
             valid = True
-        elif sheet_name == 'Assay':  # ATAC-seq links to biosample, others link to library
-            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "CHIP-seq") and row_data.relationships["assay_input"]["library"] == [""]:
+        elif sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.
+            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "CHIP-seq") and row_data.schema["starting_nucleic_acid"] == "" and row_data.relationships["assay_input"]["library"] == [""]:
                 valid = True
-            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "CHIP-seq" and row_data.relationships["assay_input"]["biosample"] == [""]:
+            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "CHIP-seq" and row_data.schema["starting_cells"] == "" and row_data.relationships["assay_input"]["biosample"] == [""]:
                 valid = True
             else:
                 raise ValidatorError("ATAC-seq assay record can only connect to biosample, other type assay record can only connect to library.\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+
+        elif sheet_name == "Biosample":
+            if row_data.schema["tissue_classification"] == "Surrogate" and (row_data.schema["tissue"] == "Blood" or row_data.schema["tissue"] == "Skin"):
+                valid = True
+            elif row_data.schema["tissue_classification"] == "Target" and (row_data.schema["tissue"] != "Blood" and row_data.schema["tissue"] != "Skin"):
+                valid = True
+            else:
+                raise ValidatorError("Only skin and blood can be surrogate,\n\
+                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+            if (row_data.schema["collection_protocol"] == "" and row_data.schema["culture_length"] == "" and row_data.schema["passage_number"] == "") or (row_data.schema["collection_protocol"] != "" and row_data.schema["culture_length"] != "" and row_data.schema["passage_number"] != ""):
+                valid = True
+            else:
+                raise ValidatorError("Only cell culture samples are required to have collection protocol, culture length and passage number,\n\
+                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+
         elif sheet_name == "File":  # paired end information
             if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "" and row_data.relationships["paired_file"]["file"] == [""]:
                 valid = True
@@ -192,6 +207,33 @@ class Validator:
             else:
                 raise ValidatorError("column Pair and Paired file must be blank for single end records, but they are required for paired end records.\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+        elif sheet_name == "Mouse":
+            if (row_data.schema["fasted"] == "Yes" and row_data.schema["fasted_hours"] > 0) or (row_data.schema["fasted"] == "No" and (row_data.schema["fasted_hours"] == 0 or row_data.schema["fasted_hours"] == -1)):
+                valid = True
+            else:
+                raise ValidatorError("Only for fasted mouse, fasted hours are required.\n\
+                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+
+        elif sheet_name == "Reagent":  # Purification method, Host organism, Isotype, Clonality, Antigen sequence filled out only if Reagent == antibody
+            if row_data.schema["reagent"] == "Antibody":
+                if row_data.schema["host"] != "" and row_data.schema["purification_method"] != "" and row_data.schema["isotype"] != "" and row_data.schema["clonality"] != "" and row_data.schema["antigen_sequence"] != "":
+                    valid = True
+                else:
+                    raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence are all requied if Reagent is antibody.\n\
+                        Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+            else:
+                if row_data.schema["host"] == "" and row_data.schema["purification_method"] == "" and row_data.schema["isotype"] == "" and row_data.schema["clonality"] == "" and row_data.schema["antigen_sequence"] == "":
+                    valid = True
+                else:
+                    raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence should not be filled if Reagent is not antibody.\n\
+                        Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+        elif sheet_name == "Treatment":  # Challenge after exposure must link to challenge diet
+            if (row_data.schema["challenge_after_exposure"] != "" and row_data.relationships["challenged_with"] != "") or (row_data.schema["challenge_after_exposure"] == "" and row_data.relationships["challenged_with"] == ""):
+                valid = True
+            else:
+                raise ValidatorError("Only rows with challenge after exposure have to fill in challenge diet.\n\
+                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+
         else:
             raise ValidatorError("record %s %s in %s is not valid and will be skipped!" % (system_accession, user_accession, sheet_name))
         return valid
