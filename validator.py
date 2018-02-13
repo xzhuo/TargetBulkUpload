@@ -113,9 +113,9 @@ class Validator:
         empty accessions ("" or "NA") become "".
         "NA" for date become 1970-01-01.
         "NA" in number fields become -1.
+        "" in text become "NA"
         all float value round to 2 digits.
         """
-
         value = cell_obj.value
         ctype = cell_obj.ctype
         data_type = self.meta_structure.get_data_type(sheet_name, column_header)
@@ -131,8 +131,14 @@ class Validator:
             else:
                 value = "FALSE"
         # now consider data_type:
-        elif data_type == "text" and ctype == CTYPE_NUMBER:
-            value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+        elif data_type == "text":
+            if ctype == CTYPE_NUMBER:
+                if "(include units)" in column_header:
+                    raise TypeError("please include units for %s in %s" % (column_header, sheet_name))
+                else:
+                    value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+            elif value == "":
+                value = "NA"
         elif data_type == "date":
             if value == "NA" or value == "":
                 value = '1970-01-01'
@@ -149,6 +155,8 @@ class Validator:
         elif data_type == "textnumber":
             if ctype == CTYPE_NUMBER:
                 value = round(value, 2)
+            elif value == "":
+                value = "NA"
         return value
 
     def row_value_audit(self, row_data):
@@ -176,10 +184,15 @@ class Validator:
             valid = True
         elif user_accession == "" and system_accession.startswith(system_accession_rule):
             valid = True
-        elif sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.
-            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "CHIP-seq") and row_data.schema["starting_nucleic_acid"] == "" and row_data.relationships["assay_input"]["library"] == [""]:
+        if not valid:
+            raise ValidatorError("Either user accession or system accession wrong in the excel file.\n\
+                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+
+        valid = False
+        if sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.
+            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "ChIP-seq") and row_data.schema["starting_nucleic_acid"] == "NA" and row_data.relationships["assay_input"]["library"] == [""]:
                 valid = True
-            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "CHIP-seq" and row_data.schema["starting_cells"] == "" and row_data.relationships["assay_input"]["biosample"] == [""]:
+            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
                 valid = True
             else:
                 raise ValidatorError("ATAC-seq assay record can only connect to biosample, other type assay record can only connect to library.\n\
@@ -193,16 +206,16 @@ class Validator:
             else:
                 raise ValidatorError("Only skin and blood can be surrogate,\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
-            if (row_data.schema["collection_protocol"] == "" and row_data.schema["culture_length"] == "" and row_data.schema["passage_number"] == "") or (row_data.schema["collection_protocol"] != "" and row_data.schema["culture_length"] != "" and row_data.schema["passage_number"] != ""):
+            if (row_data.schema["cell_culture_protocol"] == "NA" and row_data.schema["culture_length"] == "NA" and (row_data.schema["passage_number"] == -1 or row_data.schema["passage_number"] == 0)) or (row_data.schema["collection_protocol"] != "NA" and row_data.schema["culture_length"] != "NA" and row_data.schema["passage_number"] >= 0):
                 valid = True
             else:
                 raise ValidatorError("Only cell culture samples are required to have collection protocol, culture length and passage number,\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "File":  # paired end information
-            if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "" and row_data.relationships["paired_file"]["file"] == [""]:
+            if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "NA" and row_data.relationships["paired_file"]["file"] == [""]:
                 valid = True
-            elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "" and row_data.relationships["paired_file"]["file"] != [""]:
+            elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "NA" and row_data.relationships["paired_file"]["file"] != [""]:
                 valid = True
             else:
                 raise ValidatorError("column Pair and Paired file must be blank for single end records, but they are required for paired end records.\n\
@@ -216,23 +229,35 @@ class Validator:
 
         elif sheet_name == "Reagent":  # Purification method, Host organism, Isotype, Clonality, Antigen sequence filled out only if Reagent == antibody
             if row_data.schema["reagent"] == "Antibody":
-                if row_data.schema["host"] != "" and row_data.schema["purification_method"] != "" and row_data.schema["isotype"] != "" and row_data.schema["clonality"] != "" and row_data.schema["antigen_sequence"] != "":
+                if row_data.schema["host"] != "NA" and row_data.schema["purification_method"] != "NA" and row_data.schema["isotype"] != "NA" and row_data.schema["clonality"] != "NA" and row_data.schema["antigen_sequence"] != "NA":
                     valid = True
                 else:
                     raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence are all requied if Reagent is antibody.\n\
                         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
             else:
-                if row_data.schema["host"] == "" and row_data.schema["purification_method"] == "" and row_data.schema["isotype"] == "" and row_data.schema["clonality"] == "" and row_data.schema["antigen_sequence"] == "":
+                if row_data.schema["host"] == "NA" and row_data.schema["purification_method"] == "NA" and row_data.schema["isotype"] == "NA" and row_data.schema["clonality"] == "NA" and row_data.schema["antigen_sequence"] == "NA":
                     valid = True
                 else:
                     raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence should not be filled if Reagent is not antibody.\n\
                         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
         elif sheet_name == "Treatment":  # Challenge after exposure must link to challenge diet
-            if (row_data.schema["challenge_after_exposure"] != "" and row_data.relationships["challenged_with"] != "") or (row_data.schema["challenge_after_exposure"] == "" and row_data.relationships["challenged_with"] == ""):
+            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "NA") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"] == "NA"):
                 valid = True
             else:
                 raise ValidatorError("Only rows with challenge after exposure have to fill in challenge diet.\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+        elif sheet_name == "Bioproject":  # no specific validation for bioproject.
+            valid = True
+        elif sheet_name == "Litter":  # no specific validation for litter.
+            valid = True
+        elif sheet_name == "Diet":  # no specific validation for diet.
+            valid = True
+        elif sheet_name == "Library":  # no specific validation for library.
+            valid = True
+        elif sheet_name == "Mergedfile":  # no specific validation for mergedfile.
+            valid = True
+        elif sheet_name == "Experiment":  # no specific validation for mergedfile.
+            valid = True
 
         else:
             raise ValidatorError("record %s %s in %s is not valid and will be skipped!" % (system_accession, user_accession, sheet_name))

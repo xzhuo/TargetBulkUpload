@@ -237,10 +237,8 @@ class Poster:
                 # only change accession difference.
                 to_add = new_accession_set - existing_accession_set
                 to_remove = existing_accession_set - new_accession_set
-                for linkto_accession in to_remove:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=False)
-                for linkto_accession in to_add:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=True)
+                self.link_change(sheet_name, system_accession, linkto_category, to_remove, column_name, is_add=False)
+                self.link_change(sheet_name, system_accession, linkto_category, to_add, column_name, is_add=True)
 
     def submit_link(self, row_data):
         sheet_name = row_data.sheet_name
@@ -248,30 +246,29 @@ class Poster:
         for column_name in row_data.relationships:
             for linkto_category in row_data.relationships[column_name]:
                 accession_list = row_data.relationships[column_name][linkto_category]
-                for linkto_accession in accession_list:
-                    self.link_change(sheet_name, system_accession, linkto_category, linkto_accession, column_name, is_add=True)
+                self.link_change(sheet_name, system_accession, linkto_category, accession_list, column_name, is_add=True)
 
-    def link_change(self, sheet_name, system_accession, linkto_category, linkto_accession, connection_name, is_add):
+    def link_change(self, sheet_name, system_accession, linkto_category, linkto_accession_list, connection_name, is_add):
         """
         direction is either "remove" or "add"
         """
-        if linkto_accession != "":  # skip empty accessions.
+        if linkto_accession_list != ['']:  # skip empty accessions.
             if is_add:
                 direction = "add"
             else:
                 direction = "remove"
             meta_url, category, categories = self.get_sheet_info(sheet_name)
             linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
-            link_body = {"connectionAcsn": linkto_accession, "connectionName": connection_name}
-            response = self._post(linkurl, headers=self.token_header, data=link_body)
+            link_body = {"connectionAcsn": linkto_accession_list, "connectionName": connection_name}
+            response = self._post(linkurl, headers=self.token_header, data=json.dumps(link_body))
 
             if response["statusCode"] == 200:
                 if is_add:
-                    logging.info("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+                    logging.info("successfully connected %s in %s to %s!" % (system_accession, sheet_name, linkto_accession_list))
                 else:
-                    logging.info("successfully removed relationship from %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+                    logging.info("successfully removed relationship from %s in %s to %s!" % (system_accession, sheet_name, linkto_accession_list))
             else:
-                logging.error("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession))
+                logging.error("failed to connect %s in %s to %s!" % (system_accession, sheet_name, linkto_accession_list))
                 logging.error(response["message"])
 
     def save_submission(self, book_data):
