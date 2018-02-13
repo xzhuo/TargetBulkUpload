@@ -8,7 +8,7 @@ import rowdata
 
 TIMEOUT = 10
 PROD_URL = "http://10.20.127.31:6474/db/data/cypher"
-DEV_URL = "http://10.20.127.32:8474/db/data/cypher"
+DEV_URL = "http://10.20.127.31:8474/db/data/cypher"
 
 
 class Poster:
@@ -141,11 +141,11 @@ class Poster:
         for sheet_name in meta_structure.schema_dict.keys():
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
             book_data.add_sheet(sheet_data)
-            categories = meta_structure.get_categories(sheet_name)
+            category = meta_structure.get_category(sheet_name)
             # print category
             # logging.info("fetching data in sheet %s!" % sheet_name)
-            if categories in whole_data:
-                entry_list = whole_data[categories]
+            if category in whole_data:
+                entry_list = whole_data[category]
                 list_length = len(entry_list)
                 for entry_count, entry in enumerate(entry_list):
                     logging.info("Got %d of %d records in sheet %s from database!" % (entry_count + 1, list_length, sheet_name))
