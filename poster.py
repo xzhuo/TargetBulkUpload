@@ -229,14 +229,15 @@ class Poster:
         system_accession = row_data.schema["accession"]
         for column_name in row_data.relationships:
             for linkto_category in row_data.relationships[column_name]:
+                # import ipdb;ipdb.set_trace()
                 new_accession_set = set(row_data.relationships[column_name][linkto_category])
                 try:
-                    existing_accession_set = set(existing_record.relationships[column_name][linkto_category])
+                    existing_accession_set = set(existing_record.relationships[column_name][linkto_category][0])
                 except:
                     print("unable to update different kinds of records %s in %s!" % (system_accession, sheet_name))
                 # only change accession difference.
-                to_add = new_accession_set - existing_accession_set
-                to_remove = existing_accession_set - new_accession_set
+                to_add = list(new_accession_set - existing_accession_set)
+                to_remove = list(existing_accession_set - new_accession_set)
                 self.link_change(sheet_name, system_accession, linkto_category, to_remove, column_name, is_add=False)
                 self.link_change(sheet_name, system_accession, linkto_category, to_add, column_name, is_add=True)
 
@@ -252,7 +253,7 @@ class Poster:
         """
         direction is either "remove" or "add"
         """
-        if linkto_accession_list != ['']:  # skip empty accessions.
+        if len(linkto_accession_list) > 0 and linkto_accession_list != ['']:  # skip empty accessions.
             if is_add:
                 direction = "add"
             else:
