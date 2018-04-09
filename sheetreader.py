@@ -1,7 +1,7 @@
 import logging
 import sheetdata
 import validator
-
+import datetime
 
 class SheetReader:  # Of cause, the Reader can write, too.
     def __init__(self, meta_structure, excel_header_row=1, excel_data_start_row=2):
@@ -56,7 +56,10 @@ class SheetReader:  # Of cause, the Reader can write, too.
         # Create Instructions worksheet
         sheet0 = workbook.add_worksheet('Instructions')
         sheet0.write(0, 0, 'Version ' + version)  # This will need to come from URL, not hardcoded
-        sheet0.write(1, 0, 'Updated Dec 11, 2017')
+        today = datetime.datetime.today().strftime('%Y-%m-%d')
+        sheet0.write(1, 0, 'Updated on ' + today)
+
+        # sheet0.write(1, 0, 'Updated Dec 11, 2017')
         sheet0.write(2, 0, 'Note: All fields except System Accession are required unless otherwise specified.')
         sheet0.write(3, 0, 'Note: User Accessions are unique accessions assigned by the user. They must follow the specified format (e.g, URSBPRxxx) and be unique for all your records. Once submitted, each entry will be automatically assigned a System Accession (e.g., TRGTBPRxxx). Metadata can be updated by resubmitting entries with the System Accession field populated.')
         sheet0.write(4, 0, 'Note: Required metadata fields are colored gold, while optional fields are orange. Metadata connections are colored blue. To create a connection, specify the accession (user or system) of the object you wish to link to.')

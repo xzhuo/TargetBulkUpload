@@ -1,4 +1,5 @@
 import requests
+import collections
 
 ACCESSION_PLACEHOLDER_DIGITS = 3
 URL_META = 'http://target.wustl.edu:7006'
@@ -213,7 +214,7 @@ class MetaStructure:
 
     def _url_to_json(self, string):
         """Fetch the data from a url and get a dictionary or a list."""
-        new_dict = {}
+        new_dict = collections.OrderedDict()
         for category, sheet_name in self.category_to_sheet_name.items():
             json_url = self.url + string + category + '.json'
             data = requests.get(json_url).json()["data"]  # data is a list for schema, but data is a dict for links. within links: data['connections'] is a list.
@@ -221,7 +222,9 @@ class MetaStructure:
         return new_dict
 
     def _set_category_to_sheet_name(self, all_categories):  # it is a dictionary
-        return {k: k.lower().title() for k in all_categories}
+        new_dict = collections.OrderedDict()
+        new_dict = {k: k.lower().title() for k in all_categories}
+        return new_dict
 
     def _set_version(self, version_string):
         """ Giver a version string (part of the url), returns the latested database structure version."""
