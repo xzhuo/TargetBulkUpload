@@ -85,7 +85,6 @@ class MetaStructure:
             self.action_url_meta = TESTURL_META
             self.action_url_submit = TESTURL_SUBMIT
         self.url = self.action_url_meta
-        import pdb; pdb.set_trace()
         self.category_to_sheet_name = self._set_category_to_sheet_name(all_categories)  # it is a dictionary
         self.schema_dict = self._url_to_json(schema_string)
         self.link_dict = self._url_to_json(relationship_string)
