@@ -229,12 +229,11 @@ class Poster:
         system_accession = row_data.schema["accession"]
         for column_name in row_data.relationships:
             for linkto_category in row_data.relationships[column_name]:
-                # import ipdb;ipdb.set_trace()
                 new_accession_set = set(row_data.relationships[column_name][linkto_category])
                 try:
                     existing_accession_set = set(existing_record.relationships[column_name][linkto_category][0])
                 except:
-                    print("unable to update different kinds of records %s in %s!" % (system_accession, sheet_name))
+                    print("Unable to get existing relationships of records %s in %s!" % (system_accession, sheet_name))
                 # only change accession difference.
                 to_add = list(new_accession_set - existing_accession_set)
                 to_remove = list(existing_accession_set - new_accession_set)

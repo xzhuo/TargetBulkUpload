@@ -195,7 +195,7 @@ class Validator:
             elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
                 valid = True
             else:
-                raise ValidatorError("ATAC-seq assay record can only connect to biosample, other type assay record can only connect to library.\n\
+                raise ValidatorError("ATAC-seq assay starts from cells, other assays start from nucleic acid. ATAC-seq record can only connect to biosample, other type assay record can only connect to library.\n\
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "Biosample":
