@@ -25,6 +25,7 @@ def get_args():
     )
     parser.add_argument(
         '--isproduction',
+        '-p',
         action="store_true",
         dest="isproduction",
         help="test flag. default option is true, which will submit all the metadata to the test database. \

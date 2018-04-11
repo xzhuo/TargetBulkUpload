@@ -287,7 +287,6 @@ class Poster:
         if bool(submission_log):  # Only save not empty submissions, and also save update submissions.
             submission_body = {"details": json.dumps(submission_log), "update": isupdate}
             submitted_response = self._post(saved_submission_url, headers=self.token_header, data=submission_body)
-
             if submitted_response["statusCode"] == 201:
                 logging.info("Submission has been successfully saved as %s!" % submitted_response["submission_id"])
             else:
