@@ -191,11 +191,18 @@ class MetaStructure:
         :param: column_header - the column header shown in the excel file.
         :return: the data type of that column, for relationship it is always a "text"
         """
-        return self._get_column_info(sheet_name, column_header, "type")
+        column_schema = self.get_column_dict(sheet_name, column_header)
+        return column_schema["type"]
 
     def get_column_name(self, sheet_name, column_header):
         """Get the field name (column_name) in database using column header in excel."""
-        return self._get_column_info(sheet_name, column_header, "name")
+        column_schema = self.get_column_dict(sheet_name, column_header)
+        return column_schema["name"]
+
+    def is_column_required(self, sheet_name, column_header):
+        """If the field name (column_name) in excel in required in the database."""
+        column_schema = self.get_column_dict(sheet_name, column_header)
+        return column_schema["required"]
 
     def get_linkto(self, sheet_name, column_header):
         """
@@ -233,26 +240,44 @@ class MetaStructure:
         full_url = self.url + version_string
         return requests.get(full_url).json()
 
-    def _get_column_info(self, sheet_name, column_header, info):
+    def get_column_dict(self, sheet_name, column_header):
         """
-        Given a excel sheet name and a column displayname (column_header), returns desired infomation.
-
-        if info == "name", returns the database field name (column_name).
-        if info == "type", returns the column"s data type. if it is a relationship column, returns "text" always.
-        info is either "type" or "name"
+        Given a excel sheet name and a column displayname (column_header), returns the column schema in dict from json file.
         """
         if column_header in self.get_schema_column_headers(sheet_name):
-            info_list = [x[info] for x in self.get_sheet_schema(sheet_name) if x["text"] == column_header]
-            info = info_list[0]
+            column_dict = [x for x in self.get_sheet_schema(sheet_name) if x["text"] == column_header][0]
+
         elif column_header in self.get_link_column_headers(sheet_name):
-            if info == "type":
-                info = "text"
-            else:  # info == "name"
-                info_list = [x[info] for x in self.get_sheet_link(sheet_name)["connections"] if x["display_name"] == column_header]
-                info = info_list[0]
+            column_dict = [x for x in self.get_sheet_link(sheet_name)["connections"] if x["display_name"] == column_header][0]
+            column_dict["type"]="text"
+            column_dict["required"] = False  # reqired relationships are not implemented yet, none of them are required in 3.0.5.
+
         else:
             raise StructureError("unknow info %s of %s in %s" % (info, column_header, sheet_name))
-        return info
+        return column_dict
+
+    # def _get_column_info(self, sheet_name, column_header, info):
+    #     """
+    #     Given a excel sheet name and a column displayname (column_header), returns the column schema in dict from json file.
+
+    #     if info == "name", returns the database field name (column_name).
+    #     if info == "type", returns the column"s data type. if it is a relationship column, returns "text" always.
+    #     info is either "type" or "name"
+    #     """
+    #     if column_header in self.get_schema_column_headers(sheet_name):
+    #         info_list = [x[info] for x in self.get_sheet_schema(sheet_name) if x["text"] == column_header]
+    #         info = info_list[0]
+    #     elif column_header in self.get_link_column_headers(sheet_name):
+    #         if info == "type":
+    #             info = "text"
+    #         elif info == "required":
+    #             info = False  # reqired relationships are not implemented yet, none of them are required in 3.0.4.
+    #         else:  # info == "name"
+    #             info_list = [x[info] for x in self.get_sheet_link(sheet_name)["connections"] if x["display_name"] == column_header]
+    #             info = info_list[0]
+    #     else:
+    #         raise StructureError("unknow info %s of %s in %s" % (info, column_header, sheet_name))
+    #     return info
 
 
 class StructureError:

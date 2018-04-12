@@ -118,45 +118,55 @@ class Validator:
         """
         value = cell_obj.value
         ctype = cell_obj.ctype
-        data_type = self.meta_structure.get_data_type(sheet_name, column_header)
         # Now begin validation:
-        # ipdb.set_trace()
-        if column_header == "User accession" and (value == "NA" or value == ""):  # always us "" if user accession is empty or NA
-            value = ""
-        elif column_header == "System Accession" and (value == "NA" or value == ""):  # always us "" if sys accession is empty or NA
-            value = ""
-        elif ctype == CTYPE_BOOLEAN:
-            if value:
-                value = "TRUE"
-            else:
-                value = "FALSE"
-        # now consider data_type:
-        elif data_type == "text":
-            if ctype == CTYPE_NUMBER:
-                if "(include units)" in column_header:
-                    raise TypeError("please include units for %s in %s" % (column_header, sheet_name))
+
+        # change accessions from "NA" to "":
+        if column_header == "User accession" or column_header == "System Accession":
+            value = "" if value == "NA" else value
+
+        # Validate other fields:
+        else:
+            column_schema = self.meta_structure.get_column_dict(sheet_name, column_header)
+            data_type = column_schema['type']
+            required = column_schema['required']
+            if required and value == "":
+                raise ValidatorError("column %s in %s is a required!" % (column_header, sheet_name))
+
+            elif ctype == CTYPE_BOOLEAN:
+                if value:
+                    value = "TRUE"
                 else:
-                    value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
-            elif value == "":
-                value = "NA"
-        elif data_type == "date":
-            if value == "NA" or value == "":
-                value = '1970-01-01'
-            elif ctype == CTYPE_DATE:
-                value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
-        elif data_type == "number" or data_type == "float":
-            if ctype == CTYPE_NUMBER:
-                value = round(value, 2)
-            elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
-                value = -1
-                logging.info("Change NA to -1 for %s in %s." % (column_header, sheet_name))
-            else:
-                raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
-        elif data_type == "textnumber":
-            if ctype == CTYPE_NUMBER:
-                value = round(value, 2)
-            elif value == "":
-                value = "NA"
+                    value = "FALSE"
+            # now consider data_type:
+            elif data_type == "text":
+                if ctype == CTYPE_NUMBER:
+                    if "(include units)" in column_header:
+                        raise TypeError("please include units for %s in %s" % (column_header, sheet_name))
+                    else:
+                        value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+                elif value == "":
+                    value = "NA"
+            elif data_type == "date":
+                if value == "NA" or value == "":
+                    value = '1970-01-01'
+                elif ctype == CTYPE_DATE:
+                    value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
+            elif data_type == "number" or data_type == "float":
+                if ctype == CTYPE_NUMBER:
+                    value = round(value, 2)
+                elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
+                    value = -1
+                    logging.info("Change NA to -1 for %s in %s." % (column_header, sheet_name))
+                else:
+                    raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
+            elif data_type == "textnumber":
+                if ctype == CTYPE_NUMBER:
+                    value = round(value, 2)
+                elif value == "":
+                    value = "NA"
+            if column_schema["values_restricted"] and value not in column_schema["values"]:
+                raise ValidatorError("please fill in column %s in %s with the dropbown list!" % (column_header, sheet_name))
+            if column_header in self.meta_structure.get_link_column_headers(sheet_name) and ("allow_multiple" not in column_schema or column_schema["allow_multiple"])
         return value
 
     def row_value_audit(self, row_data):
@@ -257,6 +267,8 @@ class Validator:
         elif sheet_name == "Mergedfile":  # no specific validation for mergedfile.
             valid = True
         elif sheet_name == "Experiment":  # no specific validation for mergedfile.
+            valid = True
+        elif sheet_name == "Lab":  # no specific validation for lab.
             valid = True
 
         else:

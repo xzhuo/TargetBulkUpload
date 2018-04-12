@@ -208,6 +208,7 @@ class Poster:
                     row_data.submission("updated")
                     logging.info("successfully updated record %s %s in %s." % (accession, user_accession, sheet_name))
             else:
+                import ipdb;ipdb.set_trace()
                 logging.error("post request of %s %s in %s failed!" % (accession, user_accession, sheet_name))
                 logging.error(response["message"])
 
