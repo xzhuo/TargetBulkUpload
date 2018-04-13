@@ -22,8 +22,8 @@ class Poster:
         self.meta_url = self.meta_structure.action_url_meta
         self.submit_url = self.meta_structure.action_url_submit
         self.token_header = {"Authorization": self.token_key}
-        if token != '':
-            self.user_name = self.set_username()
+      #  if token != '':
+      #      self.user_name = self.set_username()
 
     def set_username(self):
         ''' Set user name based on the token key. However, an error would occur if the token key is neo4j token'''
