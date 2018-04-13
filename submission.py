@@ -104,7 +104,7 @@ def main():
     # These options no longer saved in meta_structure
 
     reader = sheetreader.SheetReader(meta_structure)
-    db_poster = poster.Poster(args.token, is_update, is_production, meta_structure)
+    db_poster = poster.Poster(args.token, '', is_update, is_production, meta_structure)
 
     workbook = xlrd.open_workbook(args.excel)
     book_data = bookdata.BookData(meta_structure)

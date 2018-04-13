@@ -1,7 +1,7 @@
 import pprint
 import logging
 import xlrd
-
+import re
 import sheetreader
 
 CTYPE_NUMBER = 2
@@ -164,9 +164,10 @@ class Validator:
                     value = round(value, 2)
                 elif value == "":
                     value = "NA"
-            if column_schema["values_restricted"] and value not in column_schema["values"]:
+            if "values_restricted" in column_schema and column_schema["values_restricted"] and value not in column_schema["values"]:
                 raise ValidatorError("please fill in column %s in %s with the dropbown list!" % (column_header, sheet_name))
-            if column_header in self.meta_structure.get_link_column_headers(sheet_name) and ("allow_multiple" not in column_schema or column_schema["allow_multiple"])
+            # if column_header in self.meta_structure.get_link_column_headers(sheet_name) and (not ("allow_multiple" in column_schema and column_schema["allow_multiple"])) and re.search(',',value):
+                # raise ValidatorError("relationship column %s in %s does not allow multiple connection!" % (column_header, sheet_name))
         return value
 
     def row_value_audit(self, row_data):

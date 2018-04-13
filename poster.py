@@ -12,18 +12,18 @@ DEV_URL = "http://10.20.127.31:8474/db/data/cypher"
 
 
 class Poster:
-    def __init__(self, token, isupdate, is_production, meta_structure):
+    def __init__(self, token, cypher, isupdate, is_production, meta_structure):
         self.token = token
         self.token_key = 'bearer ' + token
-        self.neo4j_key = 'Basic ' + token
+        self.neo4j_key = 'Basic ' + cypher
         self.isupdate = isupdate
         self.is_production = is_production
         self.meta_structure = meta_structure
         self.meta_url = self.meta_structure.action_url_meta
         self.submit_url = self.meta_structure.action_url_submit
         self.token_header = {"Authorization": self.token_key}
-        # if token != '':
-        #     self.user_name = self.set_username()
+        if token != '':
+            self.user_name = self.set_username()
 
     def set_username(self):
         ''' Set user name based on the token key. However, an error would occur if the token key is neo4j token'''

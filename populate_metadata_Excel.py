@@ -41,7 +41,15 @@ def get_args():
         action="store",
         dest="token",
         required=False,
-        help="User's API key. Not required for populate script. But need this for cypher query.\n",
+        help="User's API key.\n",
+    )
+    parser.add_argument(
+        '--cypherkey',
+        '-c',
+        action="store",
+        dest="cypher",
+        required=False,
+        help="Cypher query API key. Not required for populate script. But need this for cypher query.\n",
     )
     parser.add_argument(
         '--notest',
@@ -78,7 +86,10 @@ def main():
     token = ''
     if args.token:
         token = args.token
-    db_poster = poster.Poster(token, '', is_production, meta_structure)
+    cypher = ''
+    if args.cypher:
+        cypher = args.cypher
+    db_poster = poster.Poster(token, cypher, '', is_production, meta_structure)
     reader = sheetreader.SheetReader(meta_structure)
     if args.submission:
         # Retrieve submission JSON
