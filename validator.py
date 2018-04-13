@@ -38,7 +38,7 @@ class Validator:
 
     def duplication_check(self, poster, sheet_data):
         """
-        Make sure all the system accessions and user accessions are unique in the sheet.
+        Make sure all the system accessions and user accessions are unique in the sheet. (except user_accession=="NA-web")
 
         In the input sheet_data, each record has been validated.
         At least one of user or system accession exists, the other one must be "" if don't exists.
@@ -52,11 +52,12 @@ class Validator:
 
         sheet_name = sheet_data.name
         existing_sheet_data = poster.fetch_all(sheet_name)
-        existing_user_accessions = [x['user_accession'] for x in existing_sheet_data]
+        existing_sheet_data_uniq = [x for x in existing_sheet_data if x["user_accession"] != "NA-web"]  # python2.7+, remove NA-web so I can get a list with uniq user_accessions.
+        existing_user_accessions = [x['user_accession'] for x in existing_sheet_data_uniq]
         if len(existing_user_accessions) != len(set(existing_user_accessions)):
             raise ValidatorError("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
             # sys.exit("redundant user accession exists in the %s, please contact dcc to fix the issue!" % sheet_name)
-        existing_user_system_accession_pair = {x["user_accession"]: x["accession"] for x in existing_sheet_data}  # python2.7+
+        existing_user_system_accession_pair = {x["user_accession"]: x["accession"] for x in existing_sheet_data_uniq}  # python2.7+
         existing_system_accessions = existing_user_system_accession_pair.values()
         # FIMXE user_accessions_in_sheet = Set(...)
         # system_accessions_in_sheet = Set(...)
@@ -72,15 +73,18 @@ class Validator:
             system accession is "" but user accession exists.
             """
             if user_accession != "" and accession != "":
-                if user_accession in existing_user_accessions and existing_user_system_accession_pair[user_accession] == accession:
-                    if user_accession not in user_accession_list and accession not in system_accession_list:
-                        user_accession_list.append(user_accession)
-                        system_accession_list.append(accession)
-                    else:
-                        raise ValidatorError("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
-                        # sys.exit("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
+                if user_accession == "NA-web":  # add the system accession to the list and no more validation if it is NA-web.
+                    system_accession_list.append(accession)
                 else:
-                    raise ValidatorError("accession %s or %s in %s does not match our database record!" % (user_accession, accession, sheet_name))
+                    if user_accession in existing_user_accessions and existing_user_system_accession_pair[user_accession] == accession:
+                        if user_accession not in user_accession_list and accession not in system_accession_list:
+                            user_accession_list.append(user_accession)
+                            system_accession_list.append(accession)
+                        else:
+                            raise ValidatorError("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
+                            # sys.exit("redundant accession %s or %s in %s!" % (user_accession, accession, sheet_name))
+                    else:
+                        raise ValidatorError("accession %s or %s in %s does not match our database record!" % (user_accession, accession, sheet_name))
             elif user_accession == "" and accession != "":
                 if accession in system_accession_list:
                     raise ValidatorError("System accession %s in %s in invalid. It is a redundant accession in the worksheet." % (accession, sheet_name))
@@ -141,7 +145,7 @@ class Validator:
             elif data_type == "text":
                 if ctype == CTYPE_NUMBER:
                     if "(include units)" in column_header:
-                        raise TypeError("please include units for %s in %s" % (column_header, sheet_name))
+                        raise ValidatorError("please include units for %s in %s" % (column_header, sheet_name))
                     else:
                         value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
                 elif value == "":
@@ -158,7 +162,7 @@ class Validator:
                     value = -1
                     logging.info("Change NA to -1 for %s in %s." % (column_header, sheet_name))
                 else:
-                    raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
+                    raise ValidatorError("please use number for %s in %s" % (column_header, sheet_name))
             elif data_type == "textnumber":
                 if ctype == CTYPE_NUMBER:
                     value = round(value, 2)
@@ -193,11 +197,11 @@ class Validator:
             valid = True
         elif user_accession.startswith(user_accession_rule) and system_accession == "":
             valid = True
-        elif user_accession == "" and system_accession.startswith(system_accession_rule):
+        elif (user_accession == "" or user_accession == "NA-web") and system_accession.startswith(system_accession_rule):
             valid = True
         if not valid:
             raise ValidatorError("Either user accession or system accession wrong in the excel file.\n\
-                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+                    Record %s %s in %s is not valid!" % (system_accession, user_accession, sheet_name))
 
         valid = False
         if sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.

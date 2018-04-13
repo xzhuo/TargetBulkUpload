@@ -1,3 +1,4 @@
+import sys
 import logging
 import sheetdata
 import validator
@@ -42,9 +43,8 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
                 row_data.add(column_header, value)
 
-            valid = data_validator.row_value_audit(row_data)
-            if valid:
-                sheet_data.add_record(row_data)
+            data_validator.row_value_audit(row_data)
+            sheet_data.add_record(row_data)
         return sheet_data
 
     def write_book_header(self, workbook):

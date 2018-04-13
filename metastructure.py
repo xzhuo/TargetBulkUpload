@@ -249,7 +249,7 @@ class MetaStructure:
 
         elif column_header in self.get_link_column_headers(sheet_name):
             column_dict = [x for x in self.get_sheet_link(sheet_name)["connections"] if x["display_name"] == column_header][0]
-            column_dict["type"]="text"
+            column_dict["type"] = "text"
             column_dict["required"] = False  # reqired relationships are not implemented yet, none of them are required in 3.0.5.
 
         else:
