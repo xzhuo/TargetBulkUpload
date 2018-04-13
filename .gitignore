@@ -4,5 +4,8 @@
 *.pyc
 
 *.xlsx
+<<<<<<< Updated upstream
 
 nohup.out
+=======
+>>>>>>> Stashed changes
