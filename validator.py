@@ -252,7 +252,7 @@ class Validator:
                     raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence should not be filled if Reagent is not antibody.\n\
                         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
         elif sheet_name == "Treatment":  # Challenge after exposure must link to challenge diet
-            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "NA") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"] == "NA"):
+            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"] == ""):
                 valid = True
             else:
                 raise ValidatorError("Only rows with challenge after exposure have to fill in challenge diet.\n\
