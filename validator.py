@@ -149,7 +149,7 @@ class Validator:
                 value = round(value, 2)
             elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
                 value = -1
-                logging.info("Change NA to -1 for %s in %s." % (column_header, sheet_name))
+                logging.debug("Change NA to -1 for %s in %s." % (column_header, sheet_name))
             else:
                 raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
         elif data_type == "textnumber":
@@ -190,7 +190,7 @@ class Validator:
 
         valid = False
         if sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.
-            Valid = True
+            valid = True
             # if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "ChIP-seq") and row_data.schema["starting_nucleic_acid"] == "NA" and row_data.relationships["assay_input"]["library"] == [""]:
             #     valid = True
             # elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
