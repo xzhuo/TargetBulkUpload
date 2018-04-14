@@ -134,7 +134,7 @@ class Validator:
         elif data_type == "text":
             if ctype == CTYPE_NUMBER:
                 if "(include units)" in column_header:
-                    raise TypeError("please include units for %s in %s" % (column_header, sheet_name))
+                    raise ValidatorError("please include units for %s in %s" % (column_header, sheet_name))
                 else:
                     value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
             elif value == "":
@@ -151,7 +151,7 @@ class Validator:
                 value = -1
                 logging.debug("Change NA to -1 for %s in %s." % (column_header, sheet_name))
             else:
-                raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
+                raise ValidatorError("please use number for %s in %s" % (column_header, sheet_name))
         elif data_type == "textnumber":
             if ctype == CTYPE_NUMBER:
                 value = round(value, 2)
