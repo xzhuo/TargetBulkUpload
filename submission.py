@@ -120,21 +120,22 @@ def main():
         try:
             sheet_data = reader.read_sheet(sheet_obj, workbook.datemode)
             data_validator.duplication_check(db_poster, sheet_data)
+            book_data.add_sheet(sheet_data)
         except validator.ValidatorError as validator_error:
             logging.error(validator_error)
             validation = False
         # Now upload all the records on sheet_data:
-        if validation:
-            for record in sheet_data.all_records:
-                db_poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
-            book_data.add_sheet(sheet_data)
-
-    if is_production or args.testlink:
-        book_data.swipe_accession()
+    if validation:
         for sheet_name, sheet_data in book_data.data.items():
             for record in sheet_data.all_records:
-                db_poster.link_record(record)  # submit/update the record link.
-        db_poster.save_submission(book_data)
+                db_poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
+
+        if is_production or args.testlink:
+            book_data.swipe_accession()
+            for sheet_name, sheet_data in book_data.data.items():
+                for record in sheet_data.all_records:
+                    db_poster.link_record(record)  # submit/update the record link.
+            db_poster.save_submission(book_data)
 
 
 class SubmissionTest(unittest.TestCase):
