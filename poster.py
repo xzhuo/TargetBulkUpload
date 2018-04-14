@@ -27,8 +27,8 @@ class Poster:
                               'content-type': "application/json;charset=utf-8",
                               'authorization': self.neo4j_key,
                               }
-        # if token != '':
-        #     self.user_name = self.set_username()
+        if token != '':
+            self.user_name = self.set_username()
 
     def set_username(self):
         ''' Set user name based on the token key. However, an error would occur if the token key is neo4j token'''
@@ -52,7 +52,7 @@ class Poster:
 
     def fetch_all(self, sheet_name):
         meta_url, category, categories = self.get_sheet_info(sheet_name)
-        user_name = self.set_username()
+        user_name = self.user_name
         get_url = self.meta_url + '/api/' + categories
         response = requests.get(get_url, timeout=TIMEOUT).json()
         full_list = response[categories]  # returns a list of existing records.
@@ -258,6 +258,8 @@ class Poster:
                 # only change accession difference.
                 to_add = list(new_accession_set - existing_accession_set)
                 to_remove = list(existing_accession_set - new_accession_set)
+                if to_add == [] and to_remove == []:
+                    print("No change to relationship of records %s in %s!" % (system_accession, sheet_name))
                 self.link_change(sheet_name, system_accession, linkto_category, to_remove, column_name, is_add=False)
                 self.link_change(sheet_name, system_accession, linkto_category, to_add, column_name, is_add=True)
 
