@@ -117,8 +117,10 @@ def main():
         data_validator = validator.Validator(meta_structure)
 
         data_validator.verify_column_names(sheet_obj)
+        sheet_data, row_validation = reader.read_sheet(sheet_obj, workbook.datemode)
+        if not row_validation:
+            validation = False
         try:
-            sheet_data = reader.read_sheet(sheet_obj, workbook.datemode)
             data_validator.duplication_check(db_poster, sheet_data)
             book_data.add_sheet(sheet_data)
         except validator.ValidatorError as validator_error:
