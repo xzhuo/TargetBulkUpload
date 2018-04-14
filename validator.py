@@ -190,13 +190,14 @@ class Validator:
 
         valid = False
         if sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.
-            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "ChIP-seq") and row_data.schema["starting_nucleic_acid"] == "NA" and row_data.relationships["assay_input"]["library"] == [""]:
-                valid = True
-            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
-                valid = True
-            else:
-                raise ValidatorError("ATAC-seq assay starts from cells, other assays start from nucleic acid. ATAC-seq record can only connect to biosample, other type assay record can only connect to library.\n\
-                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+            Valid = True
+            # if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "ChIP-seq") and row_data.schema["starting_nucleic_acid"] == "NA" and row_data.relationships["assay_input"]["library"] == [""]:
+            #     valid = True
+            # elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
+            #     valid = True
+            # else:
+            #     raise ValidatorError("ATAC-seq assay starts from cells, other assays start from nucleic acid. ATAC-seq record can only connect to biosample, other type assay record can only connect to library.\n\
+            #         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "Biosample":
             if row_data.schema["tissue_classification"] == "Surrogate" and (row_data.schema["tissue"] == "Blood" or row_data.schema["tissue"] == "Skin"):
@@ -213,9 +214,13 @@ class Validator:
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "File":  # paired end information
-            if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "NA" and row_data.relationships["paired_file"]["file"] == [""]:
+            # if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "NA" and row_data.relationships["paired_file"]["file"] == [""]:
+            #     valid = True
+            # elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "NA" and row_data.relationships["paired_file"]["file"] != [""]:
+            #     valid = True
+            if row_data.schema["run_type"] == "single-end" and row_data.relationships["paired_file"]["file"] == [""]:
                 valid = True
-            elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "NA" and row_data.relationships["paired_file"]["file"] != [""]:
+            elif row_data.schema["run_type"] == "paired-end" and row_data.relationships["paired_file"]["file"] != [""]:
                 valid = True
             else:
                 raise ValidatorError("column Pair and Paired file must be blank for single end records, but they are required for paired end records.\n\
@@ -241,7 +246,7 @@ class Validator:
                     raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence should not be filled if Reagent is not antibody.\n\
                         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
         elif sheet_name == "Treatment":  # Challenge after exposure must link to challenge diet
-            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "NA") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"] == "NA"):
+            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"]["diet"] == [""]):
                 valid = True
             else:
                 raise ValidatorError("Only rows with challenge after exposure have to fill in challenge diet.\n\
@@ -257,6 +262,8 @@ class Validator:
         elif sheet_name == "Mergedfile":  # no specific validation for mergedfile.
             valid = True
         elif sheet_name == "Experiment":  # no specific validation for mergedfile.
+            valid = True
+        elif sheet_name == "Lab":  # no specific validation for lab.
             valid = True
 
         else:
