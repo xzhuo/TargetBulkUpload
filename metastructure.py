@@ -253,7 +253,7 @@ class MetaStructure:
             column_dict["required"] = False  # reqired relationships are not implemented yet, none of them are required in 3.0.5.
 
         else:
-            raise StructureError("unknow info %s of %s in %s" % (info, column_header, sheet_name))
+            raise StructureError("Can not find column %s in worksheet %s" % (column_header, sheet_name))
         return column_dict
 
     # def _get_column_info(self, sheet_name, column_header, info):

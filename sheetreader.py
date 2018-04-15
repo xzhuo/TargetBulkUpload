@@ -1,8 +1,8 @@
-import sys
 import logging
 import sheetdata
 import validator
 import datetime
+
 
 class SheetReader:  # Of cause, the Reader can write, too.
     def __init__(self, meta_structure, excel_header_row=1, excel_data_start_row=2):

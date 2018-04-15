@@ -1,7 +1,6 @@
 import json
 import requests
 import logging
-import sys
 import bookdata
 import sheetdata
 import rowdata
