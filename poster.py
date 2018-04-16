@@ -222,7 +222,11 @@ class Poster:
                 if "accession" in response:
                     row_data.schema["accession"] = response["accession"]
                     row_data.submission("submitted")
-                    logging.info("successfully submitted record %s in %s to database as %s." % (user_accession, sheet_name, row_data.schema["accession"]))
+                    if is_production:
+                        logging.info("successfully submitted record %s in %s to database as %s." % (user_accession, sheet_name, row_data.schema["accession"]))
+                    else:
+                        logging.info("successfully validated record %s in %s." % (user_accession, sheet_name))
+
                 else:
                     row_data.schema["accession"] = accession
                     row_data.submission("updated")
