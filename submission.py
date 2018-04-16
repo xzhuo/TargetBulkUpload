@@ -87,6 +87,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     else:
         logging.getLogger().setLevel(logging.INFO)  # using INFO as default output information level.
+        logging.getLogger("requests").setLevel(logging.WARNING)
 
     if not args.token:
         logging.error("please provide a user API key!")
