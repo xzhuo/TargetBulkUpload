@@ -1,7 +1,7 @@
 import json
 import requests
 import logging
-import sys
+
 import bookdata
 import sheetdata
 import rowdata
@@ -299,12 +299,12 @@ class Poster:
             r = requests.post(url, headers=headers, data=data, timeout=timeout)
             r.raise_for_status()
         except requests.exceptions.HTTPError as errh:
-            logging.error("Http Error: %s"% errh)
+            print("Http Error:", errh)
         except requests.exceptions.ConnectionError as errc:
-            logging.error("Error Connecting: %s" % errc)
+            print("Error Connecting:", errc)
         except requests.exceptions.Timeout as errt:
-            logging.error("Timeout Error:%s" % errt)
+            print("Timeout Error:", errt)
         except requests.exceptions.RequestException as err:
-            logging.error(err)
+            print(err)
         response = r.json()
         return response
