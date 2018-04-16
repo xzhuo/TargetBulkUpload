@@ -120,44 +120,54 @@ class Validator:
         ctype = cell_obj.ctype
         # Now begin validation:
 
-        # ipdb.set_trace()
-        if column_header == "User accession" and (value == "NA" or value == ""):  # always us "" if user accession is empty or NA
-            value = ""
-        elif column_header == "System Accession" and (value == "NA" or value == ""):  # always us "" if sys accession is empty or NA
-            value = ""
-        elif ctype == CTYPE_BOOLEAN:
-            if value:
-                value = "TRUE"
-            else:
-                value = "FALSE"
-        # now consider data_type:
-        elif data_type == "text":
-            if ctype == CTYPE_NUMBER:
-                if "(include units)" in column_header:
-                    raise ValidatorError("please include units for %s in %s" % (column_header, sheet_name))
-                else:
-                    value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
-            elif value == "":
-                value = "NA"
-        elif data_type == "date":
-            if value == "NA" or value == "":
-                value = '1970-01-01'
-            elif ctype == CTYPE_DATE:
-                value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
-        elif data_type == "number" or data_type == "float":
-            if ctype == CTYPE_NUMBER:
-                value = round(value, 2)
-            elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
-                value = -1
-                logging.debug("Change NA to -1 for %s in %s." % (column_header, sheet_name))
-            else:
-                raise ValidatorError("please use number for %s in %s" % (column_header, sheet_name))
-        elif data_type == "textnumber":
-            if ctype == CTYPE_NUMBER:
-                value = round(value, 2)
-            elif value == "":
-                value = "NA"
+        # change accessions from "NA" to "":
+        if column_header == "User accession" or column_header == "System Accession":
+            value = "" if value == "NA" else value
 
+        # Validate other fields:
+        else:
+            column_schema = self.meta_structure.get_column_dict(sheet_name, column_header)
+            data_type = column_schema['type']
+            required = column_schema['required']
+            if required and value == "":
+                raise ValidatorError("column %s in %s is a required!" % (column_header, sheet_name))
+
+            elif ctype == CTYPE_BOOLEAN:
+                if value:
+                    value = "TRUE"
+                else:
+                    value = "FALSE"
+            # now consider data_type:
+            elif data_type == "text":
+                if ctype == CTYPE_NUMBER:
+                    if "(include units)" in column_header:
+                        raise TypeError("please include units for %s in %s" % (column_header, sheet_name))
+                    else:
+                        value = str(value).rstrip('0').rstrip('.')  # delete trailing 0s if it is a number.
+                elif value == "":
+                    value = "NA"
+            elif data_type == "date":
+                if value == "NA" or value == "":
+                    value = '1970-01-01'
+                elif ctype == CTYPE_DATE:
+                    value = xlrd.xldate.xldate_as_datetime(value, datemode).date().isoformat()
+            elif data_type == "number" or data_type == "float":
+                if ctype == CTYPE_NUMBER:
+                    value = round(value, 2)
+                elif value == "NA" or value == "":  # assign number field to -1 if it is NA in the excel.
+                    value = -1
+                    logging.info("Change NA to -1 for %s in %s." % (column_header, sheet_name))
+                else:
+                    raise TypeError("please use number for %s in %s" % (column_header, sheet_name))
+            elif data_type == "textnumber":
+                if ctype == CTYPE_NUMBER:
+                    value = round(value, 2)
+                elif value == "":
+                    value = "NA"
+            if "values_restricted" in column_schema and column_schema["values_restricted"] and value not in column_schema["values"]:
+                raise ValidatorError("please fill in column %s in %s with the dropbown list!" % (column_header, sheet_name))
+            # if column_header in self.meta_structure.get_link_column_headers(sheet_name) and (not ("allow_multiple" in column_schema and column_schema["allow_multiple"])) and re.search(',',value):
+                # raise ValidatorError("relationship column %s in %s does not allow multiple connection!" % (column_header, sheet_name))
         return value
 
     def row_value_audit(self, row_data):
@@ -191,14 +201,13 @@ class Validator:
 
         valid = False
         if sheet_name == 'Assay':  # ATAC-seq links to biosample, starting amount of cells,  others link to library, starting amount of dna.
-            valid = True
-            # if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "ChIP-seq") and row_data.schema["starting_nucleic_acid"] == "NA" and row_data.relationships["assay_input"]["library"] == [""]:
-            #     valid = True
-            # elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
-            #     valid = True
-            # else:
-            #     raise ValidatorError("ATAC-seq assay starts from cells, other assays start from nucleic acid. ATAC-seq record can only connect to biosample, other type assay record can only connect to library.\n\
-            #         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
+            if (row_data.schema["technique"] == "ATAC-seq" or row_data.schema["technique"] == "ChIP-seq") and row_data.schema["starting_nucleic_acid"] == "NA" and row_data.relationships["assay_input"]["library"] == [""]:
+                valid = True
+            elif row_data.schema["technique"] != "ATAC-seq" and row_data.schema["technique"] != "ChIP-seq" and row_data.schema["starting_cells"] == "NA" and row_data.relationships["assay_input"]["biosample"] == [""]:
+                valid = True
+            else:
+                raise ValidatorError("ATAC-seq assay starts from cells, other assays start from nucleic acid. ATAC-seq record can only connect to biosample, other type assay record can only connect to library.\n\
+                    Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "Biosample":
             if row_data.schema["tissue_classification"] == "Surrogate" and (row_data.schema["tissue"] == "Blood" or row_data.schema["tissue"] == "Skin"):
@@ -215,13 +224,9 @@ class Validator:
                     Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "File":  # paired end information
-            # if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "NA" and row_data.relationships["paired_file"]["file"] == [""]:
-            #     valid = True
-            # elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "NA" and row_data.relationships["paired_file"]["file"] != [""]:
-            #     valid = True
-            if row_data.schema["run_type"] == "single-end" and row_data.relationships["paired_file"]["file"] == [""]:
+            if row_data.schema["run_type"] == "single-end" and row_data.schema["pair"] == "NA" and row_data.relationships["paired_file"]["file"] == [""]:
                 valid = True
-            elif row_data.schema["run_type"] == "paired-end" and row_data.relationships["paired_file"]["file"] != [""]:
+            elif row_data.schema["run_type"] == "paired-end" and row_data.schema["pair"] != "NA" and row_data.relationships["paired_file"]["file"] != [""]:
                 valid = True
             else:
                 raise ValidatorError("column Pair and Paired file must be blank for single end records, but they are required for paired end records.\n\
@@ -247,8 +252,7 @@ class Validator:
                     raise ValidatorError("Purification method, Host organism, Isotype, Clonality, Antigen sequence should not be filled if Reagent is not antibody.\n\
                         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
         elif sheet_name == "Treatment":  # Challenge after exposure must link to challenge diet
-
-            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"]["diet"] == [""]):
+            if (row_data.schema["challenge_after_exposure"] != "NA" and row_data.relationships["challenged_with"] != "") or (row_data.schema["challenge_after_exposure"] == "NA" and row_data.relationships["challenged_with"] == ""):
                 valid = True
             else:
                 raise ValidatorError("Only rows with challenge after exposure have to fill in challenge diet.\n\
