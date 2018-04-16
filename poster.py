@@ -21,10 +21,6 @@ class Poster:
         self.meta_url = self.meta_structure.action_url_meta
         self.submit_url = self.meta_structure.action_url_submit
         self.token_header = {"Authorization": self.token_key}
-<<<<<<< HEAD
-      #  if token != '':
-      #      self.user_name = self.set_username()
-=======
         self.cypher_header = {'accept': "application/json, text/plain, */*",
                               'x-stream': "true",
                               'content-type': "application/json;charset=utf-8",
@@ -32,7 +28,6 @@ class Poster:
                               }
         if token != '':
             self.user_name = self.set_username()
->>>>>>> develop_validation
 
     def set_username(self):
         ''' Set user name based on the token key. However, an error would occur if the token key is neo4j token'''
