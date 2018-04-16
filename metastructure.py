@@ -249,11 +249,11 @@ class MetaStructure:
 
         elif column_header in self.get_link_column_headers(sheet_name):
             column_dict = [x for x in self.get_sheet_link(sheet_name)["connections"] if x["display_name"] == column_header][0]
-            column_dict["type"]="text"
+            column_dict["type"] = "text"
             column_dict["required"] = False  # reqired relationships are not implemented yet, none of them are required in 3.0.5.
 
         else:
-            raise StructureError("unknow info %s of %s in %s" % (info, column_header, sheet_name))
+            raise StructureError("Can not find column %s in worksheet %s" % (column_header, sheet_name))
         return column_dict
 
     # def _get_column_info(self, sheet_name, column_header, info):

@@ -3,6 +3,7 @@ import sheetdata
 import validator
 import datetime
 
+
 class SheetReader:  # Of cause, the Reader can write, too.
     def __init__(self, meta_structure, excel_header_row=1, excel_data_start_row=2):
         self.meta_structure = meta_structure
@@ -30,6 +31,7 @@ class SheetReader:  # Of cause, the Reader can write, too.
         column_headers = self.get_sheet_headers(sheet_obj)
         sheet_data = sheetdata.SheetData(sheet_obj.name, self.meta_structure)
         data_validator = validator.Validator(self.meta_structure)
+        validation = True
         for row_index in range(self.excel_data_start_row, sheet_obj.nrows):
             row_data = sheet_data.new_row()
             for col_index in range(sheet_obj.ncols):
@@ -39,13 +41,22 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 # data_type = SheetData.get_data_type(column_header)
                 # islink = SheetData.islink(column_header)
                 cell_obj = sheet_obj.cell(row_index, col_index)  # the cell obj from xlrd
-                value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
+                try:
+                    value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
+                except validator.ValidatorError as validator_error:
+                    logging.error(validator_error)
+                    validation = False
                 row_data.add(column_header, value)
 
-            valid = data_validator.row_value_audit(row_data)
-            if valid:
-                sheet_data.add_record(row_data)
-        return sheet_data
+            try:
+                data_validator.row_value_audit(row_data)
+            except validator.ValidatorError as validator_error:
+                logging.error(validator_error)
+                validation = False
+            if not validation:
+                break
+            sheet_data.add_record(row_data)
+        return sheet_data, validation
 
     def write_book_header(self, workbook):
         excel_header_row = self.excel_header_row

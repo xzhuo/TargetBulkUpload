@@ -1,7 +1,6 @@
 import json
 import requests
 import logging
-
 import bookdata
 import sheetdata
 import rowdata
@@ -22,8 +21,18 @@ class Poster:
         self.meta_url = self.meta_structure.action_url_meta
         self.submit_url = self.meta_structure.action_url_submit
         self.token_header = {"Authorization": self.token_key}
+<<<<<<< HEAD
       #  if token != '':
       #      self.user_name = self.set_username()
+=======
+        self.cypher_header = {'accept': "application/json, text/plain, */*",
+                              'x-stream': "true",
+                              'content-type': "application/json;charset=utf-8",
+                              'authorization': self.neo4j_key,
+                              }
+        if token != '':
+            self.user_name = self.set_username()
+>>>>>>> develop_validation
 
     def set_username(self):
         ''' Set user name based on the token key. However, an error would occur if the token key is neo4j token'''
@@ -47,11 +56,31 @@ class Poster:
 
     def fetch_all(self, sheet_name):
         meta_url, category, categories = self.get_sheet_info(sheet_name)
-        user_name = self.set_username()
+        user_name = self.user_name
         get_url = self.meta_url + '/api/' + categories
         response = requests.get(get_url, timeout=TIMEOUT).json()
         full_list = response[categories]  # returns a list of existing records.
         return [x for x in full_list if x['user'] == user_name]
+
+    def fetch_all_accession(self, sheet_name):
+        """
+        Using cypher query to query a list of {system_accession:value, user_accession:value, user:value} for a given sheet.
+        Gonna replace the method fetch_all.
+        """
+        statement = "MATCH(sheet:{sheet_name}) WITH collect({system_accession:sheet.accession,user_accession:sheet.user_accession,user:sheet.user}) AS all_accession RETURN all_accession"
+        if self.is_production:
+            post_url = PROD_URL
+        else:
+            post_url = DEV_URL
+
+        post_body = {"query": statement,
+                     "params": {"sheet_name": sheet_name
+                                },
+                     "includeStats": "true"
+                     }
+
+        response = self._post(post_url, headers=self.cypher_header, data=json.dumps(post_body))
+        return response['data']['row']
 
     def read_cypher(self, json, sheet_name):
         """
@@ -90,11 +119,7 @@ class Poster:
             post_url = PROD_URL
         else:
             post_url = DEV_URL
-        cypher_header = {'accept': "application/json, text/plain, */*",
-                         'x-stream': "true",
-                         'content-type': "application/json;charset=utf-8",
-                         'authorization': self.neo4j_key,
-                         }
+
         book_data = bookdata.BookData(meta_structure)
         for category, sheet_name in meta_structure.category_to_sheet_name.items():
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
@@ -107,7 +132,7 @@ class Poster:
                                         },
                              "includeStats": "true"
                              }
-                response = self._post(post_url, headers=cypher_header, data=json.dumps(post_body))
+                response = self._post(post_url, headers=self.cypher_header, data=json.dumps(post_body))
 
                 # import ipdb; ipdb.set_trace()
                 for data in response['data']:
@@ -208,7 +233,6 @@ class Poster:
                     row_data.submission("updated")
                     logging.info("successfully updated record %s %s in %s." % (accession, user_accession, sheet_name))
             else:
-                import ipdb;ipdb.set_trace()
                 logging.error("post request of %s %s in %s failed!" % (accession, user_accession, sheet_name))
                 logging.error(response["message"])
 
@@ -238,6 +262,8 @@ class Poster:
                 # only change accession difference.
                 to_add = list(new_accession_set - existing_accession_set)
                 to_remove = list(existing_accession_set - new_accession_set)
+                if to_add == [] and to_remove == []:
+                    print("No change to relationship of records %s in %s!" % (system_accession, sheet_name))
                 self.link_change(sheet_name, system_accession, linkto_category, to_remove, column_name, is_add=False)
                 self.link_change(sheet_name, system_accession, linkto_category, to_add, column_name, is_add=True)
 
@@ -253,6 +279,10 @@ class Poster:
         """
         direction is either "remove" or "add"
         """
+        # Remove itself from linkto_list:
+        if system_accession in linkto_accession_list:
+            linkto_accession_list.remove(system_accession)
+
         if len(linkto_accession_list) > 0 and linkto_accession_list != ['']:  # skip empty accessions.
             if is_add:
                 direction = "add"
@@ -299,12 +329,12 @@ class Poster:
             r = requests.post(url, headers=headers, data=data, timeout=timeout)
             r.raise_for_status()
         except requests.exceptions.HTTPError as errh:
-            print("Http Error:", errh)
+            logging.error("Http Error: %s" % errh)
         except requests.exceptions.ConnectionError as errc:
-            print("Error Connecting:", errc)
+            logging.error("Error Connecting %s:" % errc)
         except requests.exceptions.Timeout as errt:
-            print("Timeout Error:", errt)
+            logging.error("Timeout Error: %s" % errt)
         except requests.exceptions.RequestException as err:
-            print(err)
+            logging.error(err)
         response = r.json()
         return response
