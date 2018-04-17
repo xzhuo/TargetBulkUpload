@@ -99,6 +99,9 @@ def main():
         meta_structure = metastructure.MetaStructure(is_production)
     except metastructure.StructureError as structure_error:
         logging.error(structure_error)
+    except KeyError as key_error:
+        logging.error(key_error)
+        validation = False
     # meta_structure.isupdate(args.isupdate)
     # meta_structure.isproduction(args.isproduction)
     # These options no longer saved in meta_structure

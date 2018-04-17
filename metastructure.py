@@ -6,11 +6,12 @@ URL_META = 'http://target.wustl.edu:7006'
 URL_SUBMIT = 'http://target.wustl.edu:7002'
 TESTURL_META = 'http://target.wustl.edu:8006'
 TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
-ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile"]
+ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile", 'experiment']
+WRITE_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile"]  # don't write experiment to the user anymore.
 
 
 class MetaStructure:
-    def __init__(self, is_production=False, all_categories=ALL_CATEGORIES, schema_string='/schema/', relationship_string='/schema/relationships/', version_string='/api/version'):
+    def __init__(self, is_production=False, all_categories=ALL_CATEGORIES, write_categories=WRITE_CATEGORIES, schema_string='/schema/', relationship_string='/schema/relationships/', version_string='/api/version'):
         """
         Set up metastructure.
 
@@ -86,13 +87,14 @@ class MetaStructure:
             self.action_url_submit = TESTURL_SUBMIT
         self.url = self.action_url_meta
         self.category_to_sheet_name = self._set_category_to_sheet_name(all_categories)  # it is a dictionary
+        self.write_categories = write_categories
         self.schema_dict = self._url_to_json(schema_string)
         self.link_dict = self._url_to_json(relationship_string)
         self.version = self._set_version(version_string)
 
         # Add system accession to the schema dictionary:
         for category in self.schema_dict:
-            self.schema_dict[category].insert(0, {"name": "accession", "text": "System Accession", "type": "text"})
+            self.schema_dict[category].insert(0, {"name": "accession", "text": "System Accession", "type": "text"})  # TODO add required: true here from validator.
 
     # def start_metastructure(self, isproduction, all_categories, schema_string, relationship_string, version_string):
     #     # FIXME Move to separate file
