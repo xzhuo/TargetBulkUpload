@@ -5,7 +5,7 @@ import bookdata
 import sheetdata
 import rowdata
 
-TIMEOUT = 10
+TIMEOUT = 30
 PROD_URL = "http://10.20.127.31:6474/db/data/cypher"
 DEV_URL = "http://10.20.127.31:8474/db/data/cypher"
 
