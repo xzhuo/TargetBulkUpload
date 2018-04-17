@@ -126,6 +126,9 @@ def main():
         except validator.ValidatorError as validator_error:
             logging.error(validator_error)
             validation = False
+        except TypeError as type_error:
+            logging.error(type_error)
+            validation = False
         # Now upload all the records on sheet_data:
     if validation:
         for sheet_name, sheet_data in book_data.data.items():

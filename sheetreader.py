@@ -46,12 +46,18 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 except validator.ValidatorError as validator_error:
                     logging.error(validator_error)
                     validation = False
+                except TypeError as type_error:
+                    logging.error(type_error)
+                    validation = False
                 row_data.add(column_header, value)
 
             try:
                 data_validator.row_value_audit(row_data)
             except validator.ValidatorError as validator_error:
                 logging.error(validator_error)
+                validation = False
+            except TypeError as type_error:
+                logging.error(type_error)
                 validation = False
             if not validation:
                 break
