@@ -88,7 +88,6 @@ class SheetReader:  # Of cause, the Reader can write, too.
         sheet1 = workbook.add_worksheet('Lists')
         lists = 0
         for sheet_name in meta_structure.schema_dict.keys():
-            categories = meta_structure.get_categories(sheet_name)
             # print category
             sheet_schema = meta_structure.get_sheet_schema(sheet_name)
             sheet_relationships = meta_structure.get_sheet_link(sheet_name)
@@ -101,8 +100,8 @@ class SheetReader:  # Of cause, the Reader can write, too.
             sheet.write(0, 1, user_accession_format, bold_format)
             # Column headers
             bold_gray = workbook.add_format({'bold': True, 'bg_color': 'B6B6B6'})
-            bold_dark = workbook.add_format({'bold': True, 'bg_color': 'FED254'})  # format3 used for required columns
-            bold_light = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'FFB602'})  # format4 used for not required columns
+            bold_dark = workbook.add_format({'bold': True, 'bg_color': 'FFB602'})  # format3 used for required columns
+            bold_light = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'FED254'})  # format4 used for not required columns
             bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
             bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
             # schema columns
