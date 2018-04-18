@@ -88,107 +88,104 @@ class SheetReader:  # Of cause, the Reader can write, too.
         sheet1 = workbook.add_worksheet('Lists')
         lists = 0
         for sheet_name in meta_structure.schema_dict.keys():
-            category = meta_structure.get_category(sheet_name)
-            if category in meta_structure.write_categories:
-                # print category
-                sheet_schema = meta_structure.get_sheet_schema(sheet_name)
-                sheet_relationships = meta_structure.get_sheet_link(sheet_name)
-                sheet = workbook.add_worksheet(sheet_name)
+            categories = meta_structure.get_categories(sheet_name)
+            # print category
+            sheet_schema = meta_structure.get_sheet_schema(sheet_name)
+            sheet_relationships = meta_structure.get_sheet_link(sheet_name)
+            sheet = workbook.add_worksheet(sheet_name)
 
-                # Print out standard headers and formatting for each sheet
-                bold_format = workbook.add_format({'bold': True})
-                sheet.write(0, 0, sheet_name, bold_format)
-                user_accession_format = meta_structure.get_user_accession_rule(sheet_name) + "####"  # with 4 # at the end of user accession rule here.
-                sheet.write(0, 1, user_accession_format, bold_format)
-                # Column headers
-                bold_gray = workbook.add_format({'bold': True, 'bg_color': 'B6B6B6'})
-                bold_dark = workbook.add_format({'bold': True, 'bg_color': 'FED254'})  # format3 used for required columns
-                italic_light = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'FFB602'})  # format4 used for not required columns
-                bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
-                bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
-                # schema columns
-                for m in range(0, len(sheet_schema)):
-                    # Write header
-                    column_dict = sheet_schema[m]
-                    if m == 0 or m == 1:  # system accession or user accession
-                        sheet.write(excel_header_row, m, column_dict['text'], bold_gray)  # system accession or user accession
-                    elif 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
-                        sheet.write(excel_header_row, m, column_dict['text'], bold_dark)
-                    else:
-                        sheet.write(excel_header_row, m, column_dict['text'], italic_light)
-                    # Write comment
-                    if 'placeholder' in column_dict and len(column_dict['placeholder']) > 0:
-                        sheet.write_comment(excel_header_row, m, column_dict['placeholder'])
-                    # Format entire column
-                    if 'values' in column_dict:  # Drop-down
-                        if column_dict['values_restricted']:  # Drop-down with restricted values
-                            sheet.data_validation(excel_data_start_row, m, 10000, m,
-                                                  {'validate': 'list',
-                                                   'source': column_dict['values'],
-                                                   'input_title': 'Enter a value:',
-                                                   'input_message': 'Select an option.',
-                                                   'error_title': 'Error:',
-                                                   'error_message': 'Select value from list.'
-                                                   })
-                        else:  # Drop-down with non-restricted values
-                            sheet.data_validation(excel_data_start_row, m, 10000, m,
-                                                  {'validate': 'length',  # Work on this
-                                                   'criteria': '>',
-                                                   'value': 1,
-                                                   'input_message': 'Enter value from Lists: ' + column_dict['text'] + ' (Column ' + chr(lists + 65) + ') OR enter own value.'
-                                                   })
-                            sheet1.write(0, lists, column_dict['text'], bold_red)
-                            for p in range(0, len(column_dict['values'])):
-                                sheet1.write(p + 1, lists, column_dict['values'][p])
-                            lists += 1
-                # Connection columns
-                for n in range(0, len(sheet_relationships['connections'])):
-                    link_dict = sheet_relationships['connections'][n]
-                    sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], bold_blue)
-                    if len(link_dict['placeholder']) > 0:
-                        sheet.write_comment(excel_header_row, n + m + 1, link_dict['placeholder'])
+            # Print out standard headers and formatting for each sheet
+            bold_format = workbook.add_format({'bold': True})
+            sheet.write(0, 0, sheet_name, bold_format)
+            user_accession_format = meta_structure.get_user_accession_rule(sheet_name) + "####"  # with 4 # at the end of user accession rule here.
+            sheet.write(0, 1, user_accession_format, bold_format)
+            # Column headers
+            bold_gray = workbook.add_format({'bold': True, 'bg_color': 'B6B6B6'})
+            bold_dark = workbook.add_format({'bold': True, 'bg_color': 'FED254'})  # format3 used for required columns
+            bold_light = workbook.add_format({'bold': True, 'bg_color': 'FFB602'})  # format4 used for not required columns
+            bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
+            bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
+            # schema columns
+            for m in range(0, len(sheet_schema)):
+                # Write header
+                column_dict = sheet_schema[m]
+                if m == 0:
+                    sheet.write(excel_header_row, m, column_dict['text'], bold_gray)  # system accession
+                elif 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
+                    sheet.write(excel_header_row, m, column_dict['text'], bold_dark)
+                else:
+                    sheet.write(excel_header_row, m, column_dict['text'], bold_light)
+                # Write comment
+                if 'placeholder' in column_dict and len(column_dict['placeholder']) > 0:
+                    sheet.write_comment(excel_header_row, m, column_dict['placeholder'])
+                # Format entire column
+                if 'values' in column_dict:  # Drop-down
+                    if column_dict['values_restricted']:  # Drop-down with restricted values
+                        sheet.data_validation(excel_data_start_row, m, 10000, m,
+                                              {'validate': 'list',
+                                               'source': column_dict['values'],
+                                               'input_title': 'Enter a value:',
+                                               'input_message': 'Select an option.',
+                                               'error_title': 'Error:',
+                                               'error_message': 'Select value from list.'
+                                               })
+                    else:  # Drop-down with non-restricted values
+                        sheet.data_validation(excel_data_start_row, m, 10000, m,
+                                              {'validate': 'length',  # Work on this
+                                               'criteria': '>',
+                                               'value': 1,
+                                               'input_message': 'Enter value from Lists: ' + column_dict['text'] + ' (Column ' + chr(lists + 65) + ') OR enter own value.'
+                                               })
+                        sheet1.write(0, lists, column_dict['text'], bold_red)
+                        for p in range(0, len(column_dict['values'])):
+                            sheet1.write(p + 1, lists, column_dict['values'][p])
+                        lists += 1
+            # Connection columns
+            for n in range(0, len(sheet_relationships['connections'])):
+                link_dict = sheet_relationships['connections'][n]
+                sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], bold_blue)
+                if len(link_dict['placeholder']) > 0:
+                    sheet.write_comment(excel_header_row, n + m + 1, link_dict['placeholder'])
 
     def write_book(self, workbook, book_data):
         meta_structure = self.meta_structure
         date_format = workbook.add_format({'num_format': 'mm/dd/yy'})  # Format for date fields
         for sheet_name, sheet_data in book_data.data.items():
-            category = meta_structure.get_category(sheet_name)
-            if category in meta_structure.write_categories:
-                # print category
-                sheet_schema = meta_structure.get_sheet_schema(sheet_name)
-                sheet_relationships = meta_structure.get_sheet_link(sheet_name)
-                sheet = workbook.get_worksheet_by_name(sheet_name)
-                total_rows = len(sheet_data.all_records)
-                for record_count, record_row in enumerate(sheet_data.all_records):
-                    row = record_count + self.excel_data_start_row
-                    logging.info("Printing %d of %d rows in excel sheet %s" % (record_count + 1, total_rows, sheet_name))
-                    for i in range(0, len(sheet_schema)):
-                        column_dict = sheet_schema[i]
-                        field = column_dict['name']
-                        datatype = column_dict['type']
-                        requrirement = column_dict.get('required')
-                        if field in record_row.schema.keys():
-                            record_data = record_row.schema[field]
-                            if (datatype == "date"):  # For dates, convert to date format if possible
-                                try:
-                                    float(record_data)
-                                    sheet.write(row, i, float(record_data), date_format)
-                                except ValueError:
-                                    sheet.write(row, i, record_data)
-                            else:
+            # print category
+            sheet_schema = meta_structure.get_sheet_schema(sheet_name)
+            sheet_relationships = meta_structure.get_sheet_link(sheet_name)
+            sheet = workbook.get_worksheet_by_name(sheet_name)
+            total_rows = len(sheet_data.all_records)
+            for record_count, record_row in enumerate(sheet_data.all_records):
+                row = record_count + self.excel_data_start_row
+                logging.info("Printing %d of %d rows in excel sheet %s" % (record_count + 1, total_rows, sheet_name))
+                for i in range(0, len(sheet_schema)):
+                    column_dict = sheet_schema[i]
+                    field = column_dict['name']
+                    datatype = column_dict['type']
+                    requrirement = column_dict.get('required')
+                    if field in record_row.schema.keys():
+                        record_data = record_row.schema[field]
+                        if (datatype == "date"):  # For dates, convert to date format if possible
+                            try:
+                                float(record_data)
+                                sheet.write(row, i, float(record_data), date_format)
+                            except ValueError:
                                 sheet.write(row, i, record_data)
-                        elif requrirement == "true":  # Print placeholders only if field is required
-                            if datatype == "number":
-                                sheet.write(row, i, -1)
-                            else:
-                                sheet.write(row, i, 'NA')
+                        else:
+                            sheet.write(row, i, record_data)
+                    elif requrirement == "true":  # Print placeholders only if field is required
+                        if datatype == "number":
+                            sheet.write(row, i, -1)
+                        else:
+                            sheet.write(row, i, 'NA')
 
-                    for j in range(0, len(sheet_relationships['connections'])):
-                        link_dict = sheet_relationships['connections'][j]
-                        connection = link_dict['name']
-                        for connection_name in record_row.relationships[connection]:
-                            if connection_name == link_dict['to']:
-                                links_to = record_row.relationships[connection][connection_name]
+                for j in range(0, len(sheet_relationships['connections'])):
+                    link_dict = sheet_relationships['connections'][j]
+                    connection = link_dict['name']
+                    for connection_name in record_row.relationships[connection]:
+                        if connection_name == link_dict['to']:
+                            links_to = record_row.relationships[connection][connection_name]
 
-                        if len(links_to) > 0:
-                            sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
+                    if len(links_to) > 0:
+                        sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
