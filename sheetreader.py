@@ -102,14 +102,14 @@ class SheetReader:  # Of cause, the Reader can write, too.
             # Column headers
             bold_gray = workbook.add_format({'bold': True, 'bg_color': 'B6B6B6'})
             bold_dark = workbook.add_format({'bold': True, 'bg_color': 'FED254'})  # format3 used for required columns
-            bold_light = workbook.add_format({'bold': True, 'bg_color': 'FFB602'})  # format4 used for not required columns
+            bold_light = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'FFB602'})  # format4 used for not required columns
             bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
             bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
             # schema columns
             for m in range(0, len(sheet_schema)):
                 # Write header
                 column_dict = sheet_schema[m]
-                if m == 0:
+                if m == 0 or m == 1:
                     sheet.write(excel_header_row, m, column_dict['text'], bold_gray)  # system accession
                 elif 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
                     sheet.write(excel_header_row, m, column_dict['text'], bold_dark)
