@@ -110,6 +110,8 @@ class Poster:
         meta_structure = self.meta_structure
         statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
         no_relation_statment = "OPTIONAL MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.accession"
+        # statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
+        # no_relation_statment = "OPTIONAL MATCH (n) WHERE {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.accession"
         if self.is_production:
             post_url = PROD_URL
         else:
