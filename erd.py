@@ -19,6 +19,20 @@ def get_args():
 
 
 def main():
+    color_dict = {"Lab": "#FEE59D",
+                  "File": "#FEE59D",
+                  "Diet": "#F2B187",
+                  "Library": "#F2B187",
+                  "Treatment": "#C6DFB6",
+                  "Assay": "#C6DFB6",
+                  "Litter": "#C6DFB6",
+                  "Mouse": "#BED7ED",
+                  "Reagent": "#BED7ED",
+                  "Experiment": "#BED7ED",
+                  "Bioproject": "#D9D9D9",
+                  "Biosample": "#D9D9D9",
+                  "Mergedfile": "#D9D9D9",
+                  }
     args = get_args()
     logging.getLogger().setLevel(logging.INFO)
     is_production = args.is_production
@@ -30,7 +44,7 @@ def main():
     print("title {label: \"TaRGET metadata diagram\", size: \"20\"}\n\n# Entities\n")
     for sheet_name in meta_structure.schema_dict.keys():
         # print category
-        print("[%s]" % sheet_name)
+        print("[%s] {bgcolor: \"%s\"}" % (sheet_name, color_dict[sheet_name]))
         sheet_schema = meta_structure.get_sheet_schema(sheet_name)
         for m in range(0, len(sheet_schema)):
             name = sheet_schema[m]['name']

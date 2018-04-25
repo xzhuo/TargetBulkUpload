@@ -1,0 +1,189 @@
+title {label: "TaRGET metadata diagram", size: "20"}
+
+# Entities
+
+[Lab] {bgcolor: "#FEE59D"}
+  principal_investigator {label: "Principal Investigator"}
+  institute {label: "Institute"}
+  department {label: "Department"}
+  street {label: "Street"}
+  city {label: "City/County"}
+  state {label: "State"}
+  zip_code {label: "Zip code"}
+  grant_number {label: "Grant number"}
+  sra_center_name_code {label: "SRA Center_Name code"}
+[Bioproject] {bgcolor: "#D9D9D9"}
+  title {label: "Title"}
+  design {label: "Design"}
+  summary {label: "Summary"}
+[Litter] {bgcolor: "#C6DFB6"}
+  litter_size_total {label: "Litter size (total)"}
+  litter_size_survived {label: "Litter size (survived to weaning)"}
+  litter_number {label: "Litter number"}
+  male_female_ratio {label: "Male/female ratio"}
+  age_at_mating {label: "Dam age at mating"}
+  age_matched {label: "Age-matched sire"}
+  dam_weight_mating {label: "Dam weight, mating (g)"}
+  dam_weight_weaning {label: "Dam weight, weaning (g)"}
+  dam_weight_preexposure {label: "Dam weight, pre-exposure (g)"}
+  date_born {label: "Date born"}
+  comments {label: "Comments"}
+[Mouse] {bgcolor: "#BED7ED"}
+  organism {label: "Organism"}
+  source {label: "Source"}
+  strain {label: "Strain"}
+  sex {label: "Sex"}
+  internal_id {label: "Internal ID"}
+  mouse_age_collection {label: "Mouse age at sac (include units)"}
+  life_stage_collection {label: "Life stage at sac"}
+  time_last_exposure {label: "Time since last exposure (include units)"}
+  animal_weight_sac {label: "Weight at sac (g)"}
+  perfusion {label: "Perfusion"}
+  fasted {label: "Fasted"}
+  fasted_hours {label: "Number of hours fasted"}
+  liver_tumors {label: "Liver tumors present"}
+  technicians {label: "Technicians"}
+  liver_hist_image_HE {label: "Liver histology, H&E stain"}
+  liver_hist_image_ORO {label: "Liver histology, Oil red O stain"}
+  comments {label: "Comments"}
+[Diet] {bgcolor: "#F2B187"}
+  category {label: "Category"}
+  description {label: "Description"}
+  diet_source {label: "Source"}
+  catalogId {label: "Catalog number"}
+  batchId {label: "Batch number"}
+  comments {label: "Comments"}
+[Treatment] {bgcolor: "#C6DFB6"}
+  exposure_classification {label: "Exposure classification"}
+  exposure_type {label: "Exposure type"}
+  exposure_specific {label: "Exposure"}
+  exposureId {label: "Exposure ID"}
+  exposure_dose {label: "Dose of exposure (include units)"}
+  exposure_duration {label: "Duration of exposure (include units)"}
+  exposure_number {label: "Number of exposures"}
+  exposure_route {label: "Route of exposure"}
+  exposure_age_first {label: "Age at first exposure (include units)"}
+  exposure_age_last {label: "Age at last exposure (include units)"}
+  exposure_life_stage {label: "Life stage at exposure"}
+  challenge_after_exposure {label: "Challenge after exposure"}
+  challenge_life_age_beginning {label: "Age at beginning of challenge (include units)"}
+  challenge_life_age_end {label: "Age at end of challenge (include units)"}
+  challenge_life_Stage {label: "Life stage at challenge"}
+  comments {label: "Comments"}
+[Biosample] {bgcolor: "#D9D9D9"}
+  tissue_classification {label: "Tissue Classification"}
+  sample_type {label: "Type"}
+  tissue {label: "Tissue"}
+  tissueID {label: "Tissue ID"}
+  collection_protocol {label: "Collection protocol"}
+  cell_culture_protocol {label: "Cell culture protocol"}
+  date_collected {label: "Date collected"}
+  processed_by {label: "Processed by"}
+  organ_weight {label: "Organ/tissue weight (mg)"}
+  culture_length {label: "Culture length (include units)"}
+  passage_number {label: "Passage number"}
+  phenotypic_measure {label: "Phenotypic measures"}
+  tissue_homogenized {label: "Tissue homogenized?"}
+  comments {label: "Comments"}
+[Library] {bgcolor: "#F2B187"}
+  starting_material {label: "Starting Material"}
+  starting_amount {label: "Starting amount of biosample (include units)"}
+  subcellular_fraction {label: "Subcellular fraction"}
+  population {label: "Population"}
+  date_extracted {label: "Date extracted"}
+  processed_by {label: "Processed by"}
+  extraction_method {label: "Extraction method"}
+  comments {label: "Comments"}
+[Assay] {bgcolor: "#C6DFB6"}
+  category {label: "Category"}
+  technique {label: "Technique"}
+  assay_target {label: "Target"}
+  starting_cells {label: "Starting amount of cells (mg)"}
+  starting_nucleic_acid {label: "Starting amount of nucleic acid (include units)"}
+  strand_specificity {label: "Strand specificity"}
+  date_performed {label: "Date performed"}
+  processed_by {label: "Processed by"}
+  assay_protocol {label: "Assay protocol"}
+  previously_frozen_tissue {label: "Tissue previously frozen"}
+  detergent_added {label: "Detergent added (ATAC-seq)"}
+  filtering_method {label: "Filtering method (ATAC-seq)"}
+  comments {label: "Comments"}
+[Reagent] {bgcolor: "#BED7ED"}
+  reagent {label: "Reagent"}
+  source {label: "Source"}
+  product_id {label: "Product ID"}
+  lot {label: "Lot ID"}
+  antigen_sequence {label: "Antigen sequence"}
+  clonality {label: "Clonality"}
+  host {label: "Host organism"}
+  isotype {label: "Isotype"}
+  purification_method {label: "Purification method"}
+  comments {label: "Comments"}
+[File] {bgcolor: "#FEE59D"}
+  filename {label: "Name"}
+  format {label: "Format"}
+  md5sum {label: "md5sum"}
+  size {label: "Size (bytes)"}
+  description {label: "Description"}
+  run_type {label: "Run type"}
+  read_length {label: "Read length (nt)"}
+  pair {label: "Pair"}
+  library_prep_protocol {label: "Library preparation protocol"}
+  platform {label: "Platform"}
+  instrument {label: "Instrument"}
+  machine {label: "Machine"}
+  chemistry {label: "Chemistry"}
+  pcr_cycles {label: "PCR cycles"}
+  insert_size {label: "Library insert size (nt)"}
+  standard_deviation {label: "Standard deviation (nt)"}
+  index {label: "Sequencing index"}
+  barcode {label: "Barcode"}
+  sequencing_lane {label: "Sequencing lane"}
+  run_number {label: "Run number"}
+  spike_ins {label: "Spike-ins present"}
+  sequencing_kit {label: "Sequencing kit"}
+  sequencing_protocol {label: "Sequencing protocol"}
+  submitted_by {label: "Submitted by"}
+  sequenced_by {label: "Sequenced by"}
+  comments {label: "Comments"}
+  date_generated {label: "Date generated"}
+  date_sequenced {label: "Date sequenced"}
+  pilot {label: "Data Phase"}
+[Mergedfile] {bgcolor: "#D9D9D9"}
+  date_merged {label: "Merged date"}
+  comments {label: "Comments"}
+[Experiment] {bgcolor: "#BED7ED"}
+  experiment_alias {label: "Experiment Alias"}
+  design_description {label: "Design Description"}
+
+# Relationships
+
+Bioproject  *--* Lab {label: "works_on"}
+Litter      *--* Bioproject {label: "part_of"}
+Litter      *--? Mouse {label: "sire"}
+Litter      *--? Mouse {label: "dam"}
+Mouse       *--? Litter {label: "born_to"}
+Mouse       *--* Diet {label: "fed"}
+Mouse       *--? Treatment {label: "undergoes"}
+Mouse       *--* Bioproject {label: "part_of"}
+Mouse       *--* Mouse {label: "biological_replicate"}
+Mouse       *--* Mouse {label: "control"}
+Treatment   *--* Diet {label: "challenged_with"}
+Biosample   *--? Mouse {label: "derived_from"}
+Biosample   *--* Biosample {label: "technical_replicate"}
+Biosample   *--* Biosample {label: "pooled_from"}
+Biosample   *--* Biosample {label: "target"}
+Library     *--? Biosample {label: "extracted_from"}
+Library     *--* Library {label: "technical_replicate"}
+Assay       *--* Reagent {label: "recruits"}
+Assay       *--? Biosample {label: "assay_input"}
+Assay       *--? Library {label: "assay_input"}
+Assay       *--* Assay {label: "control"}
+Assay       *--* Assay {label: "technical_replicate"}
+Assay       *--* Assay {label: "pooled_from"}
+File        *--? File {label: "paired_file"}
+File        *--* File {label: "technical_replicate"}
+File        *--? Experiment {label: "submitted_under"}
+File        *--? Assay {label: "sequenced"}
+File        *--? Mergedfile {label: "merged_file"}
+Experiment  *--* Bioproject {label: "performed_under"}
