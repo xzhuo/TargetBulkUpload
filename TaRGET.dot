@@ -5,6 +5,7 @@ digraph {
 		labeljust=l,
 		labelloc=t,
 		rankdir=LR,
+		packMode="graph"
 	];
 	node [label="\N",
 		shape=plaintext
@@ -20,110 +21,104 @@ digraph {
 	Bioproject -> Lab	 [
 		dir="both",
 		arrowhead="crownormal",
-		arrowtail="crow",
-		headlabel=<<FONT>0..N</FONT>>,
 		xlabel=<<FONT> works_on </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Litter	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#c6dfb6" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Litter</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>litter_size_total</FONT><FONT> [Litter size (total)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>litter_size_survived</FONT><FONT> [Litter size (survived to weaning)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>litter_number</FONT><FONT> [Litter number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>male_female_ratio</FONT><FONT> [Male/female ratio]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>age_at_mating</FONT><FONT> [Dam age at mating]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>age_matched</FONT><FONT> [Age&#45;matched sire]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>dam_weight_mating</FONT><FONT> [Dam weight, mating (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>dam_weight_weaning</FONT><FONT> [Dam weight, weaning (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>dam_weight_preexposure</FONT><FONT> [Dam weight, pre&#45;exposure (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_born</FONT><FONT> [Date born]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
 	Litter -> Bioproject	 [
-		headlabel=<<FONT>0..N</FONT>>,
+		arrowhead="crownormal",
 		xlabel=<<FONT> part_of </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Mouse	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Mouse</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>organism</FONT><FONT> [Organism]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>strain</FONT><FONT> [Strain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sex</FONT><FONT> [Sex]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>internal_id</FONT><FONT> [Internal ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>mouse_age_collection</FONT><FONT> [Mouse age at sac (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>life_stage_collection</FONT><FONT> [Life stage at sac]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>time_last_exposure</FONT><FONT> [Time since last exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>animal_weight_sac</FONT><FONT> [Weight at sac (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>perfusion</FONT><FONT> [Perfusion]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted</FONT><FONT> [Fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted_hours</FONT><FONT> [Number of hours fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_tumors</FONT><FONT> [Liver tumors present]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>technicians</FONT><FONT> [Technicians]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_HE</FONT><FONT> [Liver histology, H&amp;E stain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_ORO</FONT><FONT> [Liver histology, Oil red O stain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Litter -> Mouse	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	Mouse	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD PORT="f0"><B><FONT POINT-SIZE="16">Mouse</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>organism</FONT><FONT> [Organism]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>strain</FONT><FONT> [Strain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sex</FONT><FONT> [Sex]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>internal_id</FONT><FONT> [Internal ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>mouse_age_collection</FONT><FONT> [Mouse age at sac (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>life_stage_collection</FONT><FONT> [Life stage at sac]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>time_last_exposure</FONT><FONT> [Time since last exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>animal_weight_sac</FONT><FONT> [Weight at sac (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>perfusion</FONT><FONT> [Perfusion]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted</FONT><FONT> [Fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted_hours</FONT><FONT> [Number of hours fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_tumors</FONT><FONT> [Liver tumors present]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>technicians</FONT><FONT> [Technicians]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_HE</FONT><FONT> [Liver histology, H&amp;E stain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_ORO</FONT><FONT> [Liver histology, Oil red O stain]</FONT></TD></TR><TR><TD ALIGN="LEFT" PORT="f1"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
+	Litter -> Mouse	 [arrowhead="normal",
 		xlabel=<<FONT> sire </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Litter -> Mouse	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	Litter -> Mouse	 [arrowhead="normal",
 		xlabel=<<FONT> dam </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Mouse -> Bioproject	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Mouse -> Bioproject	 [arrowhead="crownormal",
 		xlabel=<<FONT> part_of </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Mouse -> Litter	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	Mouse -> Litter	 [arrowhead="normal",
 		xlabel=<<FONT> born_to </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Mouse -> Mouse	 [
-		headport=c,
-		tailport=ne,
-		headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Mouse:c -> Mouse:f0:se	 [
+		arrowhead="crownormal",
 		xlabel=<<FONT> biological_replicate </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Mouse -> Mouse	 [
-		headport=c,
-		tailport=se,
-		headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Mouse:c -> Mouse:f0:sw	 [
+		arrowhead="crownormal",
 		xlabel=<<FONT> control </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Diet	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#f2b187" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Diet</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>category</FONT><FONT> [Category]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [Description]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>diet_source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>catalogId</FONT><FONT> [Catalog number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>batchId</FONT><FONT> [Batch number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Mouse -> Diet	 [headlabel=<<FONT>0..N</FONT>>,
+	Mouse -> Diet	 [arrowhead="crownormal",
 		xlabel=<<FONT> fed </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Treatment	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#c6dfb6" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Treatment</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_classification</FONT><FONT> [Exposure classification]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_type</FONT><FONT> [Exposure type]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_specific</FONT><FONT> [Exposure]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposureId</FONT><FONT> [Exposure ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_dose</FONT><FONT> [Dose of exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_duration</FONT><FONT> [Duration of exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_number</FONT><FONT> [Number of exposures]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_route</FONT><FONT> [Route of exposure]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_age_first</FONT><FONT> [Age at first exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_age_last</FONT><FONT> [Age at last exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>exposure_life_stage</FONT><FONT> [Life stage at exposure]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>challenge_after_exposure</FONT><FONT> [Challenge after exposure]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>challenge_life_age_beginning</FONT><FONT> [Age at beginning of challenge (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>challenge_life_age_end</FONT><FONT> [Age at end of challenge (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>challenge_life_Stage</FONT><FONT> [Life stage at challenge]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Mouse -> Treatment	 [headlabel=<<FONT>{0,1}</FONT>>,
+	Mouse -> Treatment	 [arrowhead="normal",
 		xlabel=<<FONT> undergoes </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Treatment -> Diet	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Treatment -> Diet	 [arrowhead="crownormal",
 		xlabel=<<FONT> challenged_with </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Biosample	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#d9d9d9" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Biosample</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue_classification</FONT><FONT> [Tissue Classification]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sample_type</FONT><FONT> [Type]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue</FONT><FONT> [Tissue]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissueID</FONT><FONT> [Tissue ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>collection_protocol</FONT><FONT> [Collection protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>cell_culture_protocol</FONT><FONT> [Cell culture protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_collected</FONT><FONT> [Date collected]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>processed_by</FONT><FONT> [Processed by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>organ_weight</FONT><FONT> [Organ/tissue weight (mg)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>culture_length</FONT><FONT> [Culture length (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>passage_number</FONT><FONT> [Passage number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>phenotypic_measure</FONT><FONT> [Phenotypic measures]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue_homogenized</FONT><FONT> [Tissue homogenized?]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Biosample -> Mouse	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	Biosample	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#d9d9d9" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD PORT="biosample"><B><FONT POINT-SIZE="16">Biosample</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue_classification</FONT><FONT> [Tissue Classification]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sample_type</FONT><FONT> [Type]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue</FONT><FONT> [Tissue]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissueID</FONT><FONT> [Tissue ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>collection_protocol</FONT><FONT> [Collection protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>cell_culture_protocol</FONT><FONT> [Cell culture protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_collected</FONT><FONT> [Date collected]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>processed_by</FONT><FONT> [Processed by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>organ_weight</FONT><FONT> [Organ/tissue weight (mg)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>culture_length</FONT><FONT> [Culture length (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>passage_number</FONT><FONT> [Passage number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>phenotypic_measure</FONT><FONT> [Phenotypic measures]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue_homogenized</FONT><FONT> [Tissue homogenized?]</FONT></TD></TR><TR><TD ALIGN="LEFT" PORT="comments"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
+	Biosample -> Mouse	 [arrowhead="normal",
 		xlabel=<<FONT> derived_from </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Biosample -> Biosample	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Biosample:c -> Biosample:biosample:se	 [arrowhead="crownormal",
 		xlabel=<<FONT> technical_replicate </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Biosample -> Biosample	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Biosample:c -> Biosample:biosample:sw	 [arrowhead="crownormal",
 		xlabel=<<FONT> pooled_from </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Biosample -> Biosample	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Biosample:comments:sw -> Biosample:comments:ne	 [arrowhead="crownormal",
 		xlabel=<<FONT> target </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Library	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#f2b187" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Library</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>starting_material</FONT><FONT> [Starting Material]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>starting_amount</FONT><FONT> [Starting amount of biosample (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>subcellular_fraction</FONT><FONT> [Subcellular fraction]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>population</FONT><FONT> [Population]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_extracted</FONT><FONT> [Date extracted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>processed_by</FONT><FONT> [Processed by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>extraction_method</FONT><FONT> [Extraction method]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Library -> Biosample	 [headlabel=<<FONT>{0,1}</FONT>>,
+	Library -> Biosample	 [arrowhead="normal",
 		xlabel=<<FONT> extracted_from </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Library -> Library	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Library -> Library	 [arrowhead="crownormal",
 		xlabel=<<FONT> technical_replicate </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Assay	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#c6dfb6" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Assay</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>category</FONT><FONT> [Category]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>technique</FONT><FONT> [Technique]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>assay_target</FONT><FONT> [Target]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>starting_cells</FONT><FONT> [Starting amount of cells (mg)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>starting_nucleic_acid</FONT><FONT> [Starting amount of nucleic acid (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>strand_specificity</FONT><FONT> [Strand specificity]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_performed</FONT><FONT> [Date performed]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>processed_by</FONT><FONT> [Processed by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>assay_protocol</FONT><FONT> [Assay protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>previously_frozen_tissue</FONT><FONT> [Tissue previously frozen]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>detergent_added</FONT><FONT> [Detergent added (ATAC&#45;seq)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>filtering_method</FONT><FONT> [Filtering method (ATAC&#45;seq)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Assay -> Biosample	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	Assay	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#c6dfb6" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD PORT="assay"><B><FONT POINT-SIZE="16">Assay</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>category</FONT><FONT> [Category]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>technique</FONT><FONT> [Technique]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>assay_target</FONT><FONT> [Target]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>starting_cells</FONT><FONT> [Starting amount of cells (mg)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>starting_nucleic_acid</FONT><FONT> [Starting amount of nucleic acid (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>strand_specificity</FONT><FONT> [Strand specificity]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_performed</FONT><FONT> [Date performed]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>processed_by</FONT><FONT> [Processed by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>assay_protocol</FONT><FONT> [Assay protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>previously_frozen_tissue</FONT><FONT> [Tissue previously frozen]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>detergent_added</FONT><FONT> [Detergent added (ATAC&#45;seq)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>filtering_method</FONT><FONT> [Filtering method (ATAC&#45;seq)]</FONT></TD></TR><TR><TD ALIGN="LEFT"  PORT="comments"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
+	Assay -> Biosample	 [arrowhead="normal",
 		xlabel=<<FONT> assay_input </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Assay -> Library	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	Assay -> Library	 [arrowhead="normal",
 		xlabel=<<FONT> assay_input </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Assay -> Assay	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Assay:c -> Assay:assay:se	 [arrowhead="crownormal",
 		xlabel=<<FONT> control </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Assay -> Assay	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Assay:c -> Assay:assay:sw	 [arrowhead="crownormal",
 		xlabel=<<FONT> technical_replicate </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Assay -> Assay	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Assay:comments:sw -> Assay:comments:e	 [arrowhead="crownormal",
 		xlabel=<<FONT> pooled_from </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Reagent	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Reagent</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>reagent</FONT><FONT> [Reagent]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>product_id</FONT><FONT> [Product ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>lot</FONT><FONT> [Lot ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>antigen_sequence</FONT><FONT> [Antigen sequence]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>clonality</FONT><FONT> [Clonality]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>host</FONT><FONT> [Host organism]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>isotype</FONT><FONT> [Isotype]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>purification_method</FONT><FONT> [Purification method]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Assay -> Reagent	 [headlabel=<<FONT>0..N</FONT>>,
+	Assay -> Reagent	 [arrowhead="crownormal",
 		xlabel=<<FONT> recruits </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	File	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#fee59d" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">File</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>filename</FONT><FONT> [Name]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>format</FONT><FONT> [Format]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>md5sum</FONT><FONT> [md5sum]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>size</FONT><FONT> [Size (bytes)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [Description]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>run_type</FONT><FONT> [Run type]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>read_length</FONT><FONT> [Read length (nt)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>pair</FONT><FONT> [Pair]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>library_prep_protocol</FONT><FONT> [Library preparation protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>platform</FONT><FONT> [Platform]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>instrument</FONT><FONT> [Instrument]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>machine</FONT><FONT> [Machine]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>chemistry</FONT><FONT> [Chemistry]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>pcr_cycles</FONT><FONT> [PCR cycles]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>insert_size</FONT><FONT> [Library insert size (nt)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>standard_deviation</FONT><FONT> [Standard deviation (nt)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>index</FONT><FONT> [Sequencing index]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>barcode</FONT><FONT> [Barcode]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequencing_lane</FONT><FONT> [Sequencing lane]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>run_number</FONT><FONT> [Run number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>spike_ins</FONT><FONT> [Spike&#45;ins present]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequencing_kit</FONT><FONT> [Sequencing kit]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequencing_protocol</FONT><FONT> [Sequencing protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>submitted_by</FONT><FONT> [Submitted by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequenced_by</FONT><FONT> [Sequenced by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_generated</FONT><FONT> [Date generated]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_sequenced</FONT><FONT> [Date sequenced]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>pilot</FONT><FONT> [Data Phase]</FONT></TD></TR></TABLE></FONT>>];
-	File -> Assay	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	File	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#fee59d" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD PORT="f0"><B><FONT POINT-SIZE="16">File</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>filename</FONT><FONT> [Name]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>format</FONT><FONT> [Format]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>md5sum</FONT><FONT> [md5sum]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>size</FONT><FONT> [Size (bytes)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>description</FONT><FONT> [Description]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>run_type</FONT><FONT> [Run type]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>read_length</FONT><FONT> [Read length (nt)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>pair</FONT><FONT> [Pair]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>library_prep_protocol</FONT><FONT> [Library preparation protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>platform</FONT><FONT> [Platform]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>instrument</FONT><FONT> [Instrument]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>machine</FONT><FONT> [Machine]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>chemistry</FONT><FONT> [Chemistry]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>pcr_cycles</FONT><FONT> [PCR cycles]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>insert_size</FONT><FONT> [Library insert size (nt)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>standard_deviation</FONT><FONT> [Standard deviation (nt)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>index</FONT><FONT> [Sequencing index]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>barcode</FONT><FONT> [Barcode]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequencing_lane</FONT><FONT> [Sequencing lane]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>run_number</FONT><FONT> [Run number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>spike_ins</FONT><FONT> [Spike&#45;ins present]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequencing_kit</FONT><FONT> [Sequencing kit]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequencing_protocol</FONT><FONT> [Sequencing protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>submitted_by</FONT><FONT> [Submitted by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sequenced_by</FONT><FONT> [Sequenced by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_generated</FONT><FONT> [Date generated]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_sequenced</FONT><FONT> [Date sequenced]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>pilot</FONT><FONT> [Data Phase]</FONT></TD></TR></TABLE></FONT>>];
+	File -> Assay	 [arrowhead="normal",
 		xlabel=<<FONT> sequenced </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	File -> File	 [headlabel=<<FONT>{0,1}</FONT>>,
+		arrowtail="crow"];
+	File:c -> File:f0:se	 [arrowhead="normal",
 		xlabel=<<FONT> paired_file </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	File -> File	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	File:c -> File:f0:sw	 [arrowhead="crownormal",
 		xlabel=<<FONT> technical_replicate </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Mergedfile	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#d9d9d9" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Mergedfile</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_merged</FONT><FONT> [Merged date]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	File -> Mergedfile	 [headlabel=<<FONT>{0,1}</FONT>>,
+	File -> Mergedfile	 [arrowhead="normal",
 		xlabel=<<FONT> merged_file </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 	Experiment	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Experiment</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>experiment_alias</FONT><FONT> [Experiment Alias]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>design_description</FONT><FONT> [Design Description]</FONT></TD></TR></TABLE></FONT>>];
-	File -> Experiment	 [headlabel=<<FONT>{0,1}</FONT>>,
+	File -> Experiment	 [arrowhead="normal",
 		xlabel=<<FONT> submitted_under </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
-	Experiment -> Bioproject	 [headlabel=<<FONT>0..N</FONT>>,
+		arrowtail="crow"];
+	Experiment -> Bioproject	 [arrowhead="crownormal",
 		xlabel=<<FONT> performed_under </FONT>>,
-		taillabel=<<FONT>0..N</FONT>>];
+		arrowtail="crow"];
 }
