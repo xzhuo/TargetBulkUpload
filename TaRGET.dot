@@ -4,7 +4,7 @@ digraph {
 	graph [label=<<FONT POINT-SIZE="40">TaRGET metadata diagram</FONT>>,
 		labeljust=l,
 		labelloc=t,
-		rankdir=LR,
+		rankdir=RL,
 		packMode="graph"
 	];
 	node [label="\N",
@@ -29,7 +29,7 @@ digraph {
 		xlabel=<<FONT> part_of </FONT>>,
 		arrowtail="crow"];
 	Mouse	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD PORT="f0"><B><FONT POINT-SIZE="16">Mouse</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>organism</FONT><FONT> [Organism]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>strain</FONT><FONT> [Strain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sex</FONT><FONT> [Sex]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>internal_id</FONT><FONT> [Internal ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>mouse_age_collection</FONT><FONT> [Mouse age at sac (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>life_stage_collection</FONT><FONT> [Life stage at sac]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>time_last_exposure</FONT><FONT> [Time since last exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>animal_weight_sac</FONT><FONT> [Weight at sac (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>perfusion</FONT><FONT> [Perfusion]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted</FONT><FONT> [Fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted_hours</FONT><FONT> [Number of hours fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_tumors</FONT><FONT> [Liver tumors present]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>technicians</FONT><FONT> [Technicians]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_HE</FONT><FONT> [Liver histology, H&amp;E stain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_ORO</FONT><FONT> [Liver histology, Oil red O stain]</FONT></TD></TR><TR><TD ALIGN="LEFT" PORT="f1"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Litter -> Mouse	 [arrowhead="normal",
+	Litter:sw -> Mouse:se	 [arrowhead="normal",
 		xlabel=<<FONT> sire </FONT>>,
 		arrowtail="crow"];
 	Litter -> Mouse	 [arrowhead="normal",
@@ -38,7 +38,7 @@ digraph {
 	Mouse -> Bioproject	 [arrowhead="crownormal",
 		xlabel=<<FONT> part_of </FONT>>,
 		arrowtail="crow"];
-	Mouse -> Litter	 [arrowhead="normal",
+	Mouse:ne -> Litter:nw	 [arrowhead="normal",
 		xlabel=<<FONT> born_to </FONT>>,
 		arrowtail="crow"];
 	Mouse:c -> Mouse:f0:se	 [
@@ -61,7 +61,7 @@ digraph {
 		xlabel=<<FONT> challenged_with </FONT>>,
 		arrowtail="crow"];
 	Biosample	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#d9d9d9" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD PORT="biosample"><B><FONT POINT-SIZE="16">Biosample</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue_classification</FONT><FONT> [Tissue Classification]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sample_type</FONT><FONT> [Type]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue</FONT><FONT> [Tissue]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissueID</FONT><FONT> [Tissue ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>collection_protocol</FONT><FONT> [Collection protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>cell_culture_protocol</FONT><FONT> [Cell culture protocol]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_collected</FONT><FONT> [Date collected]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>processed_by</FONT><FONT> [Processed by]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>organ_weight</FONT><FONT> [Organ/tissue weight (mg)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>culture_length</FONT><FONT> [Culture length (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>passage_number</FONT><FONT> [Passage number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>phenotypic_measure</FONT><FONT> [Phenotypic measures]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>tissue_homogenized</FONT><FONT> [Tissue homogenized?]</FONT></TD></TR><TR><TD ALIGN="LEFT" PORT="comments"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Biosample -> Mouse	 [arrowhead="normal",
+	Biosample -> Mouse:s	 [arrowhead="normal",
 		xlabel=<<FONT> derived_from </FONT>>,
 		arrowtail="crow"];
 	Biosample:c -> Biosample:biosample:se	 [arrowhead="crownormal",
@@ -118,7 +118,7 @@ digraph {
 	File -> Experiment	 [arrowhead="normal",
 		xlabel=<<FONT> submitted_under </FONT>>,
 		arrowtail="crow"];
-	Experiment -> Bioproject	 [arrowhead="crownormal",
+	Experiment -> Bioproject:sw	 [arrowhead="crownormal",
 		xlabel=<<FONT> performed_under </FONT>>,
 		arrowtail="crow"];
 }
