@@ -1,5 +1,5 @@
 digraph {
-	splines=ortho;
+	splines=true;
 	overlap=false;
 	graph [label=<<FONT POINT-SIZE="40">TaRGET metadata diagram</FONT>>,
 		labeljust=l,
@@ -17,11 +17,16 @@ digraph {
 	];
 	Lab	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#fee59d" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Lab</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>principal_investigator</FONT><FONT> [Principal Investigator]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>institute</FONT><FONT> [Institute]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>department</FONT><FONT> [Department]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>street</FONT><FONT> [Street]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>city</FONT><FONT> [City/County]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>state</FONT><FONT> [State]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>zip_code</FONT><FONT> [Zip code]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>grant_number</FONT><FONT> [Grant number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sra_center_name_code</FONT><FONT> [SRA Center_Name code]</FONT></TD></TR></TABLE></FONT>>];
 	Bioproject	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#d9d9d9" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Bioproject</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>title</FONT><FONT> [Title]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>design</FONT><FONT> [Design]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>summary</FONT><FONT> [Summary]</FONT></TD></TR></TABLE></FONT>>];
-	Bioproject -> Lab	 [headlabel=<<FONT>0..N</FONT>>,
+	Bioproject -> Lab	 [
+		dir="both",
+		arrowhead="crownormal",
+		arrowtail="crow",
+		headlabel=<<FONT>0..N</FONT>>,
 		xlabel=<<FONT> works_on </FONT>>,
 		taillabel=<<FONT>0..N</FONT>>];
 	Litter	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#c6dfb6" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Litter</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>litter_size_total</FONT><FONT> [Litter size (total)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>litter_size_survived</FONT><FONT> [Litter size (survived to weaning)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>litter_number</FONT><FONT> [Litter number]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>male_female_ratio</FONT><FONT> [Male/female ratio]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>age_at_mating</FONT><FONT> [Dam age at mating]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>age_matched</FONT><FONT> [Age&#45;matched sire]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>dam_weight_mating</FONT><FONT> [Dam weight, mating (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>dam_weight_weaning</FONT><FONT> [Dam weight, weaning (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>dam_weight_preexposure</FONT><FONT> [Dam weight, pre&#45;exposure (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>date_born</FONT><FONT> [Date born]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
-	Litter -> Bioproject	 [headlabel=<<FONT>0..N</FONT>>,
+	Litter -> Bioproject	 [
+		headlabel=<<FONT>0..N</FONT>>,
 		xlabel=<<FONT> part_of </FONT>>,
 		taillabel=<<FONT>0..N</FONT>>];
 	Mouse	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Mouse</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>organism</FONT><FONT> [Organism]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>strain</FONT><FONT> [Strain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>sex</FONT><FONT> [Sex]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>internal_id</FONT><FONT> [Internal ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>mouse_age_collection</FONT><FONT> [Mouse age at sac (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>life_stage_collection</FONT><FONT> [Life stage at sac]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>time_last_exposure</FONT><FONT> [Time since last exposure (include units)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>animal_weight_sac</FONT><FONT> [Weight at sac (g)]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>perfusion</FONT><FONT> [Perfusion]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted</FONT><FONT> [Fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>fasted_hours</FONT><FONT> [Number of hours fasted]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_tumors</FONT><FONT> [Liver tumors present]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>technicians</FONT><FONT> [Technicians]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_HE</FONT><FONT> [Liver histology, H&amp;E stain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>liver_hist_image_ORO</FONT><FONT> [Liver histology, Oil red O stain]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
@@ -38,10 +43,14 @@ digraph {
 		xlabel=<<FONT> born_to </FONT>>,
 		taillabel=<<FONT>0..N</FONT>>];
 	Mouse -> Mouse	 [
+		headport=c,
+		tailport=ne,
 		headlabel=<<FONT>0..N</FONT>>,
 		xlabel=<<FONT> biological_replicate </FONT>>,
 		taillabel=<<FONT>0..N</FONT>>];
 	Mouse -> Mouse	 [
+		headport=c,
+		tailport=se,
 		headlabel=<<FONT>0..N</FONT>>,
 		xlabel=<<FONT> control </FONT>>,
 		taillabel=<<FONT>0..N</FONT>>];
