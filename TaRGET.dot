@@ -93,7 +93,7 @@ digraph {
 	Assay:c -> Assay:assay:sw	 [arrowhead="crownormal",
 		xlabel=<<FONT> technical_replicate </FONT>>,
 		arrowtail="crow"];
-	Assay:comments:sw -> Assay:comments:e	 [arrowhead="crownormal",
+	Assay:comments:sw -> Assay:comments:ne	 [arrowhead="crownormal",
 		xlabel=<<FONT> pooled_from </FONT>>,
 		arrowtail="crow"];
 	Reagent	 [label=<<FONT FACE="Helvetica"><TABLE BGCOLOR="#bed7ed" BORDER="0" CELLBORDER="1" CELLPADDING="4" CELLSPACING="0"><TR><TD><B><FONT POINT-SIZE="16">Reagent</FONT></B></TD></TR><TR><TD ALIGN="LEFT"><FONT>reagent</FONT><FONT> [Reagent]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>source</FONT><FONT> [Source]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>product_id</FONT><FONT> [Product ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>lot</FONT><FONT> [Lot ID]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>antigen_sequence</FONT><FONT> [Antigen sequence]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>clonality</FONT><FONT> [Clonality]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>host</FONT><FONT> [Host organism]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>isotype</FONT><FONT> [Isotype]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>purification_method</FONT><FONT> [Purification method]</FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT>comments</FONT><FONT> [Comments]</FONT></TD></TR></TABLE></FONT>>];
