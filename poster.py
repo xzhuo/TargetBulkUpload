@@ -131,25 +131,29 @@ class Poster:
                              "includeStats": "true"
                              }
                 response = self._post(post_url, headers=self.cypher_header, data=json.dumps(post_body))
-
-                # import ipdb; ipdb.set_trace()
+                # sort rows by user accession and then add to sheet_data:
+                data_list = []
                 for data in response['data']:
                     if data[0] is not None:
-                        record = rowdata.RowData(sheet_name, meta_structure)
-                        record.schema = data[0]["data"]
-                        # initiate empty record relationship strcuture:
-                        for column_header in meta_structure.get_link_column_headers(sheet_name):
-                            # do link stuff
-                            column_name = meta_structure.get_column_name(sheet_name, column_header)
-                            sheetlinkto = meta_structure.get_linkto(sheet_name, column_header)
-                            categorylinkto = meta_structure.get_category(sheetlinkto)
-                            if column_name in record.relationships:
-                                record.relationships[column_name][categorylinkto] = []
-                            else:
-                                record.relationships[column_name] = {categorylinkto: []}
-                        for connection in data[1]:
-                            record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
-                        sheet_data.add_record(record)
+                        data_list.append(data)
+                data_list.sort(key=lambda x: x[0]["data"]["user_accession"])
+                # import ipdb; ipdb.set_trace()
+                for data in data_list:
+                    record = rowdata.RowData(sheet_name, meta_structure)
+                    record.schema = data[0]["data"]
+                    # initiate empty record relationship strcuture:
+                    for column_header in meta_structure.get_link_column_headers(sheet_name):
+                        # do link stuff
+                        column_name = meta_structure.get_column_name(sheet_name, column_header)
+                        sheetlinkto = meta_structure.get_linkto(sheet_name, column_header)
+                        categorylinkto = meta_structure.get_category(sheetlinkto)
+                        if column_name in record.relationships:
+                            record.relationships[column_name][categorylinkto] = []
+                        else:
+                            record.relationships[column_name] = {categorylinkto: []}
+                    for connection in data[1]:
+                        record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
+                    sheet_data.add_record(record)
         return book_data
 
     def fetch_submission(self, submission):
