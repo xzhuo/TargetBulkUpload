@@ -109,12 +109,14 @@ class Poster:
         send cypher query, get the json string, and convert to book_data. Download all records for a specific user.
         """
         meta_structure = self.meta_structure
-        statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
-        no_relation_statment = "OPTIONAL MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.user_accession"
+        # statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
+        # no_relation_statment = "OPTIONAL MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.user_accession"
         # statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
         # no_relation_statment = "OPTIONAL MATCH (n) WHERE {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.accession"
-        
-        single_statement = "MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
+        if user == "all":
+            single_statement = "MATCH (n) WHERE {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY toInteger(substring(n.accession, 8))"
+        else:
+            single_statement = "MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
         if self.is_production:
             post_url = PROD_URL
         else:
