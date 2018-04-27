@@ -133,6 +133,7 @@ def main():
     if validation:
         print("successfully validated all the data in the excel file!")
         if is_production:
+            print("Please read the following log information to make sure your submission is successful!")
             for sheet_name, sheet_data in book_data.data.items():
                 for record in sheet_data.all_records:
                     db_poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
