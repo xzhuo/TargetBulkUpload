@@ -131,11 +131,11 @@ def main():
             validation = False
         # Now upload all the records on sheet_data:
     if validation:
-        for sheet_name, sheet_data in book_data.data.items():
-            for record in sheet_data.all_records:
-                db_poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
-
-        if is_production or args.testlink:
+        print("successfully validated all the data in the excel file!")
+        if is_production:
+            for sheet_name, sheet_data in book_data.data.items():
+                for record in sheet_data.all_records:
+                    db_poster.submit_record(record)  # submit/update the record, track which record has been submitted or updated, and assign system accession to the submitted record.
             book_data.swipe_accession()
             for sheet_name, sheet_data in book_data.data.items():
                 for record in sheet_data.all_records:

@@ -1,3 +1,4 @@
+import sys
 import json
 import requests
 import logging
@@ -330,12 +331,12 @@ class Poster:
             r = requests.post(url, headers=headers, data=data, timeout=timeout)
             r.raise_for_status()
         except requests.exceptions.HTTPError as errh:
-            logging.error("Http Error: %s" % errh)
+            sys.exit("Http Error: %s" % errh)
         except requests.exceptions.ConnectionError as errc:
-            logging.error("Error Connecting %s:" % errc)
+            sys.exit("Error Connecting %s:" % errc)
         except requests.exceptions.Timeout as errt:
-            logging.error("Timeout Error: %s" % errt)
+            sys.exit("Timeout Error: %s" % errt)
         except requests.exceptions.RequestException as err:
-            logging.error(err)
+            sys.exit(err)
         response = r.json()
         return response
