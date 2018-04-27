@@ -109,10 +109,12 @@ class Poster:
         send cypher query, get the json string, and convert to book_data. Download all records for a specific user.
         """
         meta_structure = self.meta_structure
-        statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
-        no_relation_statment = "OPTIONAL MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.accession"
+        statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE n.user={name} AND {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
+        no_relation_statment = "OPTIONAL MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.user_accession"
         # statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
         # no_relation_statment = "OPTIONAL MATCH (n) WHERE {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.accession"
+        
+        single_statement = "MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
         if self.is_production:
             post_url = PROD_URL
         else:
@@ -123,33 +125,33 @@ class Poster:
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
             book_data.add_sheet(sheet_data)
             logging.info("Fetching %s" % sheet_name)
-            for user_statement in [statement, no_relation_statment]:
-                post_body = {"query": user_statement,
-                             "params": {"name": user,
-                                        "tab": category
-                                        },
-                             "includeStats": "true"
-                             }
-                response = self._post(post_url, headers=self.cypher_header, data=json.dumps(post_body))
+            post_body = {"query": single_statement,
+                         "params": {"name": user,
+                                    "tab": category
+                                    },
+                         "includeStats": "true"
+                         }
+            response = self._post(post_url, headers=self.cypher_header, data=json.dumps(post_body))
 
-                # import ipdb; ipdb.set_trace()
-                for data in response['data']:
-                    if data[0] is not None:
-                        record = rowdata.RowData(sheet_name, meta_structure)
-                        record.schema = data[0]["data"]
-                        # initiate empty record relationship strcuture:
-                        for column_header in meta_structure.get_link_column_headers(sheet_name):
-                            # do link stuff
-                            column_name = meta_structure.get_column_name(sheet_name, column_header)
-                            sheetlinkto = meta_structure.get_linkto(sheet_name, column_header)
-                            categorylinkto = meta_structure.get_category(sheetlinkto)
-                            if column_name in record.relationships:
-                                record.relationships[column_name][categorylinkto] = []
-                            else:
-                                record.relationships[column_name] = {categorylinkto: []}
-                        for connection in data[1]:
+            # import ipdb; ipdb.set_trace()
+            for data in response['data']:
+                if data[0] is not None:
+                    record = rowdata.RowData(sheet_name, meta_structure)
+                    record.schema = data[0]["data"]
+                    # initiate empty record relationship strcuture:
+                    for column_header in meta_structure.get_link_column_headers(sheet_name):
+                        # do link stuff
+                        column_name = meta_structure.get_column_name(sheet_name, column_header)
+                        sheetlinkto = meta_structure.get_linkto(sheet_name, column_header)
+                        categorylinkto = meta_structure.get_category(sheetlinkto)
+                        if column_name in record.relationships:
+                            record.relationships[column_name][categorylinkto] = []
+                        else:
+                            record.relationships[column_name] = {categorylinkto: []}
+                    for connection in data[1]:
+                        if not connection['connection'] == 'na':
                             record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
-                        sheet_data.add_record(record)
+                    sheet_data.add_record(record)
         return book_data
 
     def fetch_submission(self, submission):
