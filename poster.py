@@ -196,7 +196,7 @@ class Poster:
         all_files = requests.get(url1, timeout=TIMEOUT).json()['body']
         submission_json = requests.get(url2, timeout=TIMEOUT).json()['body'][0]
         files = [x for x in all_files if x['submission'] == submission_id]
-        dataphase = submission_json['dataphase'] if "dataphase" in submission_json else 'pilot'
+        dataphase = submission_json['data_phase'] if "dataphase" in submission_json else 'pilot'
         read_type = submission_json['read_type']
         for file in files:
             filename = file["filename"]
