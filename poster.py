@@ -205,7 +205,7 @@ class Poster:
                 if read_type == "paired-end":
                     pair = "forward" if filename.find("R1.fastq") > 0 else "reverse"
                 else:
-                    pair = ''
+                    pair = 'forward'
                 final_json = {'filename':filename,
                               'file_uuid':file["_id"],
                               'md5sum':file["md5sum"],
