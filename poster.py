@@ -373,12 +373,16 @@ class Poster:
             r = requests.post(url, headers=headers, data=data, timeout=timeout)
             r.raise_for_status()
         except requests.exceptions.HTTPError as errh:
+            logging.error(r.content)
             sys.exit("Http Error: %s" % errh)
         except requests.exceptions.ConnectionError as errc:
+            logging.error(r.content)
             sys.exit("Error Connecting %s:" % errc)
         except requests.exceptions.Timeout as errt:
+            logging.error(r.content)
             sys.exit("Timeout Error: %s" % errt)
         except requests.exceptions.RequestException as err:
+            logging.error(r.content)
             sys.exit(err)
         response = r.json()
         return response
