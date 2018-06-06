@@ -9,7 +9,7 @@ import rowdata
 TIMEOUT = 60
 PROD_URL = "http://10.20.127.31:6474/db/data/cypher"
 DEV_URL = "http://10.20.127.31:8474/db/data/cypher"
-
+DATA_SUBMIT_URL = "https://5dum6c4ytb.execute-api.us-east-1.amazonaws.com/dev"
 
 class Poster:
     def __init__(self, token, cypher, isupdate, is_production, meta_structure):
@@ -179,6 +179,44 @@ class Poster:
                     # record = requests.get(action_url_meta + '/api/' + categories + '/' + entry).json().get('mainObj')
                     record_row = self.fetch_record(sheet_name, entry)  # A Rowdata obj.
                     sheet_data.add_record(record_row)
+        return book_data
+
+    def fetch_file_info(self, submission_id):
+        '''
+        From data submission experiment design fetch useful infomation, return a book_data to be filled in an excel.
+        '''
+        meta_structure = self.meta_structure
+        book_data = bookdata.BookData(meta_structure)
+        sheet_data = sheetdata.SheetData("File", meta_structure)
+        book_data.add_sheet(sheet_data)
+        url1 = DATA_SUBMIT_URL + '/files'
+        url2 = DATA_SUBMIT_URL + '/submission/' + submission_id
+
+        # Collecting attributes from schema
+        all_files = requests.get(url1, timeout=TIMEOUT).json()['body']
+        submission_json = requests.get(url2, timeout=TIMEOUT).json()['body'][0]
+        files = [x for x in all_files if x['submission'] == submission_id]
+        dataphase = submission_json['dataphase'] if "dataphase" in submission_json else 'pilot'
+        read_type = submission_json['read_type']
+        for file in files:
+            filename = file["filename"]
+            if filename.find("fastq") > 0:
+                record = rowdata.RowData("File", meta_structure)
+                if read_type == "paired-end":
+                    pair = "forward" if filename.find("R1.fastq") > 0 else "reverse"
+                else:
+                    pair = ''
+                final_json = {'filename':filename,
+                              'file_uuid':file["_id"],
+                              'md5sum':file["md5sum"],
+                              'format':"fastq",
+                              'run_type':read_type,
+                              'submission_id':submission_id,
+                              'pair':pair,
+                              'pilot':dataphase
+                             }
+                record.schema = final_json
+                sheet_data.add_record(record)
         return book_data
 
     def submit_record(self, row_data):

@@ -182,9 +182,10 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 for j in range(0, len(sheet_relationships['connections'])):
                     link_dict = sheet_relationships['connections'][j]
                     connection = link_dict['name']
-                    for connection_name in record_row.relationships[connection]:
-                        if connection_name == link_dict['to']:
-                            links_to = record_row.relationships[connection][connection_name]
+                    if connection in record_row.relationships:
+                        for connection_name in record_row.relationships[connection]:
+                            if connection_name == link_dict['to']:
+                                links_to = record_row.relationships[connection][connection_name]
 
-                    if len(links_to) > 0:
-                        sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
+                        if len(links_to) > 0:
+                            sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
