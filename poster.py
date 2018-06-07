@@ -195,28 +195,29 @@ class Poster:
         # Collecting attributes from schema
         all_files = requests.get(url1, timeout=TIMEOUT).json()['body']
         submission_json = requests.get(url2, timeout=TIMEOUT).json()['body'][0]
-        files = [x for x in all_files if x['submission'] == submission_id]
+        # files = [x for x in all_files if x['submission'] == submission_id]
         dataphase = submission_json['data_phase'] if "data_phase" in submission_json else 'pilot'
         read_type = submission_json['read_type']
-        for file in files:
+        validated_files = submission_json['validated_files']
+        for file in validated_files:
             filename = file["filename"]
-            if filename.find("fastq") > 0:
-                record = rowdata.RowData("File", meta_structure)
-                if read_type == "paired-end":
-                    pair = "forward" if filename.find("R1.fastq") > 0 else "reverse"
-                else:
-                    pair = 'forward'
-                final_json = {'filename':filename,
-                              'file_uuid':file["_id"],
-                              'md5sum':file["md5sum"],
-                              'format':"fastq",
-                              'run_type':read_type,
-                              'submission_id':submission_id,
-                              'pair':pair,
-                              'pilot':dataphase
-                             }
-                record.schema = final_json
-                sheet_data.add_record(record)
+            record = rowdata.RowData("File", meta_structure)
+            if read_type == "paired-end":
+                pair = "forward" if filename.find("R1.fastq") > 0 else "reverse"
+            else:
+                pair = 'forward'
+            final_json = {'filename':filename,
+                          'file_uuid':file["uuid"],
+                          'md5sum':file["md5sum"],
+                          'format':"fastq",
+                          'run_type':read_type,
+                          'submission_id':submission_id,
+                          'pair':pair,
+                          'pilot':dataphase,
+                          'size':file["size"]
+                         }
+            record.schema = final_json
+            sheet_data.add_record(record)
         return book_data
 
     def submit_record(self, row_data):
