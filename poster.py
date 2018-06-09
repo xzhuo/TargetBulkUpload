@@ -335,7 +335,14 @@ class Poster:
                 direction = "remove"
             meta_url, category, categories = self.get_sheet_info(sheet_name)
             linkurl = meta_url + '/api/' + categories + '/' + system_accession + '/' + linkto_category + '/' + direction  # direction should be add or remove
-            link_body = {"connectionAcsn": linkto_accession_list, "connectionName": connection_name}
+            # link_body = {"connectionAcsn": linkto_accession_list, "connectionName": connection_name}
+            if direction == "remove":  # temp fix for single accession removal.
+                for single_accession in linkto_accession_list:  # temp fix for single accession removal.
+                    link_body = {"connectionAcsn": single_accession, "connectionName": connection_name}  # temp fix for single accession removal.
+            else:  # temp fix for single accession removal.
+                link_body = {"connectionAcsn": linkto_accession_list, "connectionName": connection_name}  # temp fix for single accession removal.
+
+
             response = self._post(linkurl, headers=self.token_header, data=json.dumps(link_body))
 
             if response["statusCode"] == 200:
