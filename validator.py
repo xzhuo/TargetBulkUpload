@@ -215,7 +215,7 @@ class Validator:
             #         Record %s %s in %s is not valid, quit!" % (system_accession, user_accession, sheet_name))
 
         elif sheet_name == "Biosample":
-            if row_data.schema["tissue_classification"] == "Surrogate" and (row_data.schema["tissue"] == "Blood" or row_data.schema["tissue"] == "Skin"):
+            if row_data.schema["tissue_classification"] == "Surrogate" and (row_data.schema["tissue"].startswith("Blood") or row_data.schema["tissue"] == "Skin"):
                 valid = True
             elif row_data.schema["tissue_classification"] == "Target" and (row_data.schema["tissue"] != "Blood" and row_data.schema["tissue"] != "Skin"):
                 valid = True
