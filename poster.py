@@ -11,6 +11,7 @@ PROD_URL = "http://10.20.127.31:6474/db/data/cypher"
 DEV_URL = "http://10.20.127.31:8474/db/data/cypher"
 DATA_SUBMIT_URL = "https://5dum6c4ytb.execute-api.us-east-1.amazonaws.com/dev"
 
+
 class Poster:
     def __init__(self, token, cypher, isupdate, is_production, meta_structure):
         self.token = token
@@ -158,7 +159,58 @@ class Poster:
 
     def fetch_submission(self, submission):
         """
-        returns a workbook
+        returns a workbook per submission using cypher
+        """
+
+        meta_structure = self.meta_structure
+        single_statement = "MATCH (f:file)-[*]->(n) WHERE f.submission_id={submission} AND {tab} IN labels(n) " \
+                           "WITH DISTINCT n " \
+                           "OPTIONAL MATCH (n)-[r]->(m) " \
+                           "RETURN n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added " \
+                           "ORDER BY n.user_accession"
+        if self.is_production:
+            post_url = PROD_URL
+        else:
+            post_url = DEV_URL
+
+        book_data = bookdata.BookData(meta_structure)
+        for category, sheet_name in meta_structure.category_to_sheet_name.items():
+            sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
+            book_data.add_sheet(sheet_data)
+            # print category
+            logging.info("Fetching %s" % sheet_name)
+            post_body = {"query": single_statement,
+                         "params": {"submission": submission,
+                                    "tab": category
+                                    },
+                         "includeStats": "true"
+                         }
+            response = self._post(post_url, headers=self.cypher_header, data=json.dumps(post_body))
+
+            # import ipdb; ipdb.set_trace()
+            for data in response['data']:
+                if data[0] is not None:
+                    record = rowdata.RowData(sheet_name, meta_structure)
+                    record.schema = data[0]["data"]
+                    # initiate empty record relationship strcuture:
+                    for column_header in meta_structure.get_link_column_headers(sheet_name):
+                        # do link stuff
+                        column_name = meta_structure.get_column_name(sheet_name, column_header)
+                        sheetlinkto = meta_structure.get_linkto(sheet_name, column_header)
+                        categorylinkto = meta_structure.get_category(sheetlinkto)
+                        if column_name in record.relationships:
+                            record.relationships[column_name][categorylinkto] = []
+                        else:
+                            record.relationships[column_name] = {categorylinkto: []}
+                    for connection in data[1]:
+                        if not connection['connection'] == 'na':
+                            record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
+                    sheet_data.add_record(record)
+        return book_data
+
+    def fetch_submission_dep(self, submission):
+        """
+        returns a workbook. old api, too slow now.
         """
 
         meta_structure = self.meta_structure

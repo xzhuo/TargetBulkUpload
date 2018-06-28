@@ -92,14 +92,10 @@ def main():
     db_poster = poster.Poster(token, cypher, '', is_production, meta_structure)
     reader = sheetreader.SheetReader(meta_structure)
     if args.submission:
-        # Retrieve submission JSON
-        submission_string = requests.get(args.submission).text
-        submission = json.loads(submission_string)['submission']
+        submission = args.submission
 
         # Create workbook
-        if "_id" not in submission:
-            sys.exit("failed get request at line 64!")
-        workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + submission["_id"] + '_V' + version + '.xlsx')  # The submission should be extracted, replace url
+        workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + submission + '_V' + version + '.xlsx')  # The submission should be extracted, replace url
         reader.write_book_header(workbook)
         book_data = db_poster.fetch_submission(submission)
         reader.write_book(workbook, book_data)
