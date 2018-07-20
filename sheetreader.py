@@ -101,8 +101,9 @@ class SheetReader:  # Of cause, the Reader can write, too.
             # Column headers
             bold_gray = workbook.add_format({'bold': True, 'bg_color': 'B6B6B6'})
             bold_dark = workbook.add_format({'bold': True, 'bg_color': 'CC6600'})  # format3 used for required columns
-            bold_light = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'FED254'})  # format4 used for not required columns
-            bold_blue = workbook.add_format({'bold': True, 'bg_color': 'B0CDEA'})        # format5 used for link columns
+            light_yellow = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'FED254'})  # format4 used for not required columns
+            light_blue = workbook.add_format({'bold': False, 'italic': True, 'bg_color': 'B0CDEA'})        # format5 used for not required link columns
+            bold_purple = workbook.add_format({'bold': True, 'bg_color': '#A569BD'})        # format used for required link columns
             bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
             # schema columns
             for m in range(0, len(sheet_schema)):
@@ -113,7 +114,7 @@ class SheetReader:  # Of cause, the Reader can write, too.
                 elif 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
                     sheet.write(excel_header_row, m, column_dict['text'], bold_dark)
                 else:
-                    sheet.write(excel_header_row, m, column_dict['text'], bold_light)
+                    sheet.write(excel_header_row, m, column_dict['text'], light_yellow)
                 # Write comment
                 if 'placeholder' in column_dict and len(column_dict['placeholder']) > 0:
                     sheet.write_comment(excel_header_row, m, column_dict['placeholder'])
@@ -142,7 +143,10 @@ class SheetReader:  # Of cause, the Reader can write, too.
             # Connection columns
             for n in range(0, len(sheet_relationships['connections'])):
                 link_dict = sheet_relationships['connections'][n]
-                sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], bold_blue)
+                if 'required' in link_dict and link_dict['required']:
+                    sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], bold_purple)
+                else:
+                    sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], light_blue)
                 if len(link_dict['placeholder']) > 0:
                     sheet.write_comment(excel_header_row, n + m + 1, link_dict['placeholder'])
 
