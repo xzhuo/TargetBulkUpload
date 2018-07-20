@@ -9,8 +9,8 @@ TESTURL_META = URL_META
 TESTURL_SUBMIT = URL_SUBMIT
 # TESTURL_META = 'http://target.wustl.edu:8006'
 # TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
-ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "assay", "reagent", "file"]
-# ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile", "experiment"]
+# ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "assay", "reagent", "file"]
+ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile", "experiment"]
 
 
 class MetaStructure:
