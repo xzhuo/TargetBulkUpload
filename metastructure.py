@@ -5,10 +5,10 @@ ACCESSION_PLACEHOLDER_DIGITS = 3
 URL_META = 'http://target.wustl.edu:7006'
 URL_SUBMIT = 'http://target.wustl.edu:7002'
 
-TESTURL_META = URL_META
-TESTURL_SUBMIT = URL_SUBMIT
-# TESTURL_META = 'http://target.wustl.edu:8006'
-# TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
+# TESTURL_META = URL_META
+# TESTURL_SUBMIT = URL_SUBMIT
+TESTURL_META = 'http://target.wustl.edu:8006'
+TESTURL_SUBMIT = 'http://target.wustl.edu:8002'
 ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "assay", "reagent", "file"]
 # ALL_CATEGORIES = ["lab", "bioproject", "litter", "mouse", "diet", "treatment", "biosample", "library", "assay", "reagent", "file", "mergedFile", "experiment"]
 
