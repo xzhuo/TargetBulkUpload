@@ -262,16 +262,16 @@ class Poster:
                 pair = "forward" if filename.find("R1.fastq") > 0 else "reverse"
             else:
                 pair = 'forward'
-            final_json = {'filename':filename,
-                          'file_uuid':file["uuid"],
-                          'md5sum':file["md5sum"],
-                          'format':"fastq",
-                          'run_type':read_type,
-                          'submission_id':submission_id,
-                          'pair':pair,
-                          'pilot':dataphase,
-                          'size':file["size"]
-                         }
+            final_json = {'filename': filename,
+                          'file_uuid': file["uuid"],
+                          'md5sum': file["md5sum"],
+                          'format': "fastq",
+                          'run_type': read_type,
+                          'submission_id': submission_id,
+                          'pair': pair,
+                          'pilot': dataphase,
+                          'size': file["size"]
+                          }
             record.schema = final_json
             sheet_data.add_record(record)
         return book_data
@@ -397,7 +397,6 @@ class Poster:
                     link_body = {"connectionAcsn": single_accession, "connectionName": connection_name}  # temp fix for single accession removal.
             else:  # temp fix for single accession removal.
                 link_body = {"connectionAcsn": linkto_accession_list, "connectionName": connection_name}  # temp fix for single accession removal.
-
 
             response = self._post(linkurl, headers=self.token_header, data=json.dumps(link_body))
 
