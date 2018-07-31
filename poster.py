@@ -165,7 +165,7 @@ class Poster:
         meta_structure = self.meta_structure
         single_statement = "MATCH (f:file)-[*]->(n) WHERE f.submission_id={submission} AND {tab} IN labels(n) " \
                            "WITH DISTINCT n " \
-                           "OPTIONAL MATCH (n)-[r]->(m) " \
+                           "OPTIONAL MATCH (n)-[r]->(m) WHERE labels(m) IN {schema_categories}" \
                            "RETURN n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added " \
                            "ORDER BY n.user_accession"
         if self.is_production:
@@ -174,6 +174,7 @@ class Poster:
             post_url = DEV_URL
 
         book_data = bookdata.BookData(meta_structure)
+        schema_category_list = list(meta_structure.category_to_sheet_name.keys())
         for category, sheet_name in meta_structure.category_to_sheet_name.items():
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
             book_data.add_sheet(sheet_data)
@@ -181,7 +182,8 @@ class Poster:
             logging.info("Fetching %s" % sheet_name)
             post_body = {"query": single_statement,
                          "params": {"submission": submission,
-                                    "tab": category
+                                    "tab": category,
+                                    "schema_categories": schema_category_list
                                     },
                          "includeStats": "true"
                          }
