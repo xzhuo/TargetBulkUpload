@@ -115,22 +115,24 @@ class Poster:
         # statement = "OPTIONAL MATCH (n)-[r]->(m) WHERE {tab} IN labels(n) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.accession"
         # no_relation_statment = "OPTIONAL MATCH (n) WHERE {tab} IN labels(n) AND NOT (n)-->() RETURN distinct n as schema, [] as added ORDER BY n.accession"
         if user == "all":
-            single_statement = "MATCH (n) WHERE {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY toInteger(substring(n.accession, 8))"
+            single_statement = "MATCH (n) WHERE {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) WHERE labels(m) IN {schema_categories} RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY toInteger(substring(n.accession, 8))"
         else:
-            single_statement = "MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
+            single_statement = "MATCH (n) WHERE n.user={name} AND {tab} IN labels(n) OPTIONAL MATCH (n)-[r]->(m) WHERE labels(m) IN {schema_categories} RETURN distinct n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added ORDER BY n.user_accession"
         if self.is_production:
             post_url = PROD_URL
         else:
             post_url = DEV_URL
 
         book_data = bookdata.BookData(meta_structure)
+        schema_category_list = list(meta_structure.category_to_sheet_name.keys())
         for category, sheet_name in meta_structure.category_to_sheet_name.items():
             sheet_data = sheetdata.SheetData(sheet_name, meta_structure)
             book_data.add_sheet(sheet_data)
             logging.info("Fetching %s" % sheet_name)
             post_body = {"query": single_statement,
                          "params": {"name": user,
-                                    "tab": category
+                                    "tab": category,
+                                    "schema_categories": schema_category_list
                                     },
                          "includeStats": "true"
                          }
