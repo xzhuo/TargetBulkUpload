@@ -28,6 +28,8 @@ class SheetReader:  # Of cause, the Reader can write, too.
         :param: datemode - The workbook.datemode got from xlrd workbook class.
         returns a fully validated SheetData object.
         """
+        schema_headers = self.meta_structure.get_schema_column_headers(sheet_obj.name)
+        link_headers = self.meta_structure.get_link_column_headers(sheet_obj.name)
         column_headers = self.get_sheet_headers(sheet_obj)
         sheet_data = sheetdata.SheetData(sheet_obj.name, self.meta_structure)
         data_validator = validator.Validator(self.meta_structure)
@@ -36,20 +38,20 @@ class SheetReader:  # Of cause, the Reader can write, too.
             row_data = sheet_data.new_row()
             for col_index in range(sheet_obj.ncols):
                 column_header = column_headers[col_index]
-
-                # column_name = SheetData.get_column_name(column_header)
-                # data_type = SheetData.get_data_type(column_header)
-                # islink = SheetData.islink(column_header)
-                cell_obj = sheet_obj.cell(row_index, col_index)  # the cell obj from xlrd
-                try:
-                    value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
-                except validator.ValidatorError as validator_error:
-                    logging.error(validator_error)
-                    validation = False
-                except TypeError as type_error:
-                    logging.error(type_error)
-                    validation = False
-                row_data.add(column_header, value)
+                if column_header in schema_headers or column_header in link_headers:
+                    # column_name = SheetData.get_column_name(column_header)
+                    # data_type = SheetData.get_data_type(column_header)
+                    # islink = SheetData.islink(column_header)
+                    cell_obj = sheet_obj.cell(row_index, col_index)  # the cell obj from xlrd
+                    try:
+                        value = data_validator.cell_value_audit(sheet_data.name, column_header, cell_obj, datemode)
+                    except validator.ValidatorError as validator_error:
+                        logging.error(validator_error)
+                        validation = False
+                    except TypeError as type_error:
+                        logging.error(type_error)
+                        validation = False
+                    row_data.add(column_header, value)
 
             try:
                 data_validator.row_value_audit(row_data)
