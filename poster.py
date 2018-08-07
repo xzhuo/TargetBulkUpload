@@ -154,7 +154,9 @@ class Poster:
                         else:
                             record.relationships[column_name] = {categorylinkto: []}
                     for connection in data[1]:
-                        if not connection['connection'] == 'na':
+                        if not connection['connection'] == 'na' and connection['connection'] in meta_structure.get_link_column_names(sheet_name):
+                            if sheet_name == 'File' and connection['connection'] == 'technical_replicate':
+                                import ipdb; ipdb.set_trace()
                             record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
                     sheet_data.add_record(record)
         return book_data
@@ -207,7 +209,7 @@ class Poster:
                         else:
                             record.relationships[column_name] = {categorylinkto: []}
                     for connection in data[1]:
-                        if not connection['connection'] == 'na':
+                        if not connection['connection'] == 'na' and connection['connection'] in meta_structure.get_link_column_names(sheet_name):
                             record.relationships[connection['connection']][connection['to'][0]].append(connection['accession'])  # may change r, to m to more meaningful variable names.
                     sheet_data.add_record(record)
         return book_data
