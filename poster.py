@@ -165,7 +165,7 @@ class Poster:
         """
 
         meta_structure = self.meta_structure
-        single_statement = "MATCH (f:file)-[*]->(n) WHERE f.submission_id={submission} AND {tab} IN labels(n) " \
+        single_statement = "MATCH (f:file)-[*0..5]->(n) WHERE f.submission_id={submission} AND {tab} IN labels(n) " \
                            "WITH DISTINCT n " \
                            "OPTIONAL MATCH (n)-[r]->(m) WHERE labels(m) IN {schema_categories}" \
                            "RETURN n as schema, collect({connection:coalesce(type(r),'na'),to:coalesce(labels(m),'na'),accession:coalesce(m.accession,'na')}) as added " \
