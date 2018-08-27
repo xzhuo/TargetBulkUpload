@@ -66,8 +66,10 @@ class SheetReader:  # Of cause, the Reader can write, too.
             sheet_data.add_record(row_data)
         return sheet_data, validation
 
-    def write_book_header(self, workbook):
+    def write_book_header(self, workbook, csv_ready=False):
         excel_header_row = self.excel_header_row
+        if excel_header_row < 1 and csv_ready:
+            logging.error("CSV ready template needs at least 2 lines of header!")
         excel_data_start_row = self.excel_data_start_row
         meta_structure = self.meta_structure
         version_dict = meta_structure.version
@@ -108,15 +110,22 @@ class SheetReader:  # Of cause, the Reader can write, too.
             bold_purple = workbook.add_format({'bold': True, 'bg_color': '#A569BD'})        # format used for required link columns
             bold_red = workbook.add_format({'bold': True, 'font_color': 'red'})  # format used in the list tab header.
             # schema columns
+            header_property = 'name' if csv_ready else 'text'
             for m in range(0, len(sheet_schema)):
                 # Write header
                 column_dict = sheet_schema[m]
                 if m == 0 or m == 1:
-                    sheet.write(excel_header_row, m, column_dict['text'], bold_gray)  # system accession
+                    if csv_ready:
+                        sheet.write(excel_header_row - 1, m, column_dict['text'], bold_gray)  # system accession
+                    sheet.write(excel_header_row, m, column_dict[header_property], bold_gray)  # system accession
                 elif 'required' in column_dict and column_dict['required']:  # Color-coding required and optional fields
-                    sheet.write(excel_header_row, m, column_dict['text'], bold_dark)
+                    if csv_ready:
+                        sheet.write(excel_header_row - 1, m, column_dict['text'], bold_dark)
+                    sheet.write(excel_header_row, m, column_dict[header_property], bold_dark)
                 else:
-                    sheet.write(excel_header_row, m, column_dict['text'], light_yellow)
+                    if csv_ready:
+                        sheet.write(excel_header_row - 1, m, column_dict['text'], light_yellow)
+                    sheet.write(excel_header_row, m, column_dict[header_property], light_yellow)
                 # Write comment
                 if 'placeholder' in column_dict and len(column_dict['placeholder']) > 0:
                     sheet.write_comment(excel_header_row, m, column_dict['placeholder'])
@@ -143,12 +152,17 @@ class SheetReader:  # Of cause, the Reader can write, too.
                             sheet1.write(p + 1, lists, column_dict['values'][p])
                         lists += 1
             # Connection columns
+            header_property = 'name' if csv_ready else 'display_name'
             for n in range(0, len(sheet_relationships['connections'])):
                 link_dict = sheet_relationships['connections'][n]
                 if 'required' in link_dict and link_dict['required']:
-                    sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], bold_purple)
+                    if csv_ready:
+                        sheet.write(excel_header_row - 1, n + m + 1, link_dict['display_name'], bold_purple)
+                    sheet.write(excel_header_row, n + m + 1, link_dict[header_property], bold_purple)
                 else:
-                    sheet.write(excel_header_row, n + m + 1, link_dict['display_name'], light_blue)
+                    if csv_ready:
+                        sheet.write(excel_header_row - 1, n + m + 1, link_dict['display_name'], light_blue)
+                    sheet.write(excel_header_row, n + m + 1, link_dict[header_property], light_blue)
                 if len(link_dict['placeholder']) > 0:
                     sheet.write_comment(excel_header_row, n + m + 1, link_dict['placeholder'])
 
