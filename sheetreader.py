@@ -2,6 +2,7 @@ import logging
 import sheetdata
 import validator
 import datetime
+import csv
 
 
 class SheetReader:  # Of cause, the Reader can write, too.
@@ -210,14 +211,33 @@ class SheetReader:  # Of cause, the Reader can write, too.
                         if len(links_to) > 0:
                             sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
 
-    def write_csv(self, workbook, book_data):
-        meta_structure = self.meta_structure
+    def write_csv(self, book_data):
         for sheet_name, sheet_data in book_data.data.items():
             # print category
-            sheet_schema = meta_structure.get_sheet_schema(sheet_name)
-            sheet_relationships = meta_structure.get_sheet_link(sheet_name)
-            data_properties = [x.schema for x in sheet_data.all_records]
-            data_relationships = [x.relationships for x in sheet_data.all_records]
+            properties_flat_json = [x.schema for x in sheet_data.all_records]
+            self.json_2_csv(properties_flat_json, sheet_name + "nodes.csv")
+            data_both = [x for x in sheet_data.all_records]
+            relationships_flat_json = []
+            # import ipdb;ipdb.set_trace()
+            for each_both_dict in data_both:
+                each_dict = {"accession": each_both_dict.schema["accession"], "user": each_both_dict.schema["user"], "user_accession": each_both_dict.schema["user_accession"]}
+                for name, link_to_dict in each_both_dict.relationships.items():
+                    for link_to, acc_list in link_to_dict.items():
+                        for acc in acc_list:
+                            each_dict.update({name + ":" + link_to: acc})
+                relationships_flat_json.append(each_dict)
+
+            self.json_2_csv(relationships_flat_json, sheet_name + "relationships.csv")
+
+    def json_2_csv(self, input, csv_file):  # the input is a list of single level dict.
+        '''https://stackoverflow.com/questions/1871524/how-can-i-convert-json-to-csv'''
+        columns = [x for row in input for x in row.keys()]
+        columns = list(set(columns))
+        with open(csv_file, 'w') as out_file:
+            csv_w = csv.writer(out_file)
+            csv_w.writerow(columns)
+            for i_r in input:
+                csv_w.writerow(map(lambda x: i_r.get(x, ""), columns))
 
 # the structure:
 # ipdb> pp sheet_relationships

@@ -68,11 +68,11 @@ def get_args():
         The metadata only fetch records from the production database if this option is TRUE.\n",
     )
     parser.add_argument(
-        '--csv_ready',
+        '--csv',
         '-v',
         action="store_true",
-        dest="csv_ready",
-        help="if import_CSV can be used on the elsx file.\n",
+        dest="csv",
+        help="write the data in seperated csv files.\n",
     )
     return parser.parse_args()
 
@@ -103,23 +103,24 @@ def main():
 
         # Create workbook
         workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + submission + '_V' + version + '.xlsx')  # The submission should be extracted, replace url
-        reader.write_book_header(workbook, args.csv_ready)
+        reader.write_book_header(workbook)
         book_data = db_poster.fetch_submission(submission)
         reader.write_book(workbook, book_data)
         workbook.close()
     elif args.user:
         user = args.user
         workbook = xlsxwriter.Workbook('TaRGET_metadata_sub_' + user + '-V' + version + '.xlsx')  # The submission should be extracted, replace url
-        reader.write_book_header(workbook, args.csv_ready)
+        reader.write_book_header(workbook)
         # with open(args.cypher, 'r') as file:
         #     cypher_json = json.load(file)
         # book_data = db_poster.read_cypher(cypher_json, 'Assay')
         book_data = db_poster.fetch_user_all(user)
         reader.write_book(workbook, book_data)
+        reader.write_csv(book_data)
         workbook.close()
     else:
         workbook = xlsxwriter.Workbook('TaRGET_metadata_V' + version + '.xlsx')
-        reader.write_book_header(workbook, args.csv_ready)
+        reader.write_book_header(workbook)
         workbook.close()
 
 
