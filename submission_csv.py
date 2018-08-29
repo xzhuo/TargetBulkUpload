@@ -42,6 +42,14 @@ def get_args():
         metadata successfully submitted to test database.\n",
     )
     parser.add_argument(
+        '--tokenkey',
+        '-k',
+        action="store",
+        dest="token",
+        required=True,
+        help="User's API key. Required.\n",
+    )
+    parser.add_argument(
         '--update',
         '-u',
         action="store_true",
@@ -62,6 +70,16 @@ def get_args():
         help="debug or not. with the flag the script will run as debug mode.\n"
     )
     return parser.parse_args()
+
+# Functions I need to code for this:
+# Create new system accession, user, date_created and date_modified properties for each node;
+# Incremental change uniqId nodes;
+# Create relationships using (user and user_accession) or system accession;
+# Create multiple relationships using comma delimited list;
+# Accession validation?
+# modify date_modified on update query;
+# delete relationships;
+# create new relationships.
 
 
 def main():

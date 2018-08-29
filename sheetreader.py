@@ -209,3 +209,76 @@ class SheetReader:  # Of cause, the Reader can write, too.
 
                         if len(links_to) > 0:
                             sheet.write(row, i + j + 1, ','.join(links_to))  # Use comma to separate entries for those with multiple allowed
+
+    def write_csv(self, workbook, book_data):
+        meta_structure = self.meta_structure
+        for sheet_name, sheet_data in book_data.data.items():
+            # print category
+            sheet_schema = meta_structure.get_sheet_schema(sheet_name)
+            sheet_relationships = meta_structure.get_sheet_link(sheet_name)
+            data_properties = [x.schema for x in sheet_data.all_records]
+            data_relationships = [x.relationships for x in sheet_data.all_records]
+
+# the structure:
+# ipdb> pp sheet_relationships
+# {'all': 'bioprojects',
+#  'connections': [{'all': 'labs',
+#                   'allow_multiple': True,
+#                   'display_name': 'Lab',
+#                   'name': 'works_on',
+#                   'placeholder': 'Link to Lab accession',
+#                   'required': False,
+#                   'to': 'lab',
+#                   'type': 'text'}],
+#  'one': 'bioproject',
+#  'prefix': 'TRGTBPR000',
+#  'usr_prefix': 'USRBPR000'}
+# ipdb> pp sheet_schema
+# [{'name': 'accession', 'text': 'System Accession', 'type': 'text'},
+#  {'name': 'user_accession',
+#   'placeholder': 'USRBPR####',
+#   'required': False,
+#   'text': 'User accession',
+#   'type': 'text'},
+#  {'name': 'title',
+#   'placeholder': '255 characters max',
+#   'required': True,
+#   'text': 'Title',
+#   'type': 'text'},
+#  {'name': 'design',
+#   'placeholder': 'Description of goals and objectives (publically accessible)',
+#   'required': True,
+#   'text': 'Design',
+#   'type': 'textarea'},
+#  {'name': 'summary',
+#   'placeholder': 'Description of number of samples, replicates, controls, etc.',
+#   'required': True,
+#   'text': 'Summary',
+#   'type': 'textarea'}]
+
+#   ipdb> pp sheet_data.__dict__
+# {'all_records': [<rowdata.RowData object at 0x10e59bfd0>,
+#                  <rowdata.RowData object at 0x10e59bef0>,
+#                  <rowdata.RowData object at 0x10e59bf60>,
+#                  <rowdata.RowData object at 0x10e59bf28>,
+#                  <rowdata.RowData object at 0x10e59beb8>,
+#                  <rowdata.RowData object at 0x10e59be10>,
+#                  <rowdata.RowData object at 0x10e59be48>,
+#                  <rowdata.RowData object at 0x10e5a69e8>,
+#                  <rowdata.RowData object at 0x10e5a6668>],
+#  'meta_structure': <metastructure.MetaStructure object at 0x10d70d240>,
+#  'name': 'Bioproject'}
+# ipdb> pp sheet_data.all_records[0].__dict__
+# {'meta_structure': <metastructure.MetaStructure object at 0x10d70d240>,
+#  'relationships': {'works_on': {'lab': ['TRGTLAB0003']}},
+#  'schema': {'accession': 'TRGTBPR0002',
+#             'created': 1497295464032,
+#             'design': 'To investigate alternations in transcription profile '
+#                       'and chromatin accessibility in BPA exposure mice.',
+#             'modified': 1533668028925,
+#             'summary': 'Ctrl / Low / Up-dose exposure, female / male '
+#                        'separately',
+#             'title': 'BPA exposure on prenatal mice',
+#             'user': 'yeminlan',
+#             'user_accession': 'NA-web'},
+#  'sheet_name': 'Bioproject'}
