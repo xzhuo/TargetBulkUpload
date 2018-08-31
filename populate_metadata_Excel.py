@@ -116,7 +116,6 @@ def main():
         # book_data = db_poster.read_cypher(cypher_json, 'Assay')
         book_data = db_poster.fetch_user_all(user)
         reader.write_book(workbook, book_data)
-        reader.write_csv(book_data)
         workbook.close()
     else:
         workbook = xlsxwriter.Workbook('TaRGET_metadata_V' + version + '.xlsx')
