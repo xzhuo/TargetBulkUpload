@@ -220,7 +220,7 @@ class SheetReader:  # Of cause, the Reader can write, too.
             relationships_flat_json = []
             # import ipdb;ipdb.set_trace()
             for each_both_dict in data_both:
-                each_dict = {"accession": each_both_dict.schema["accession"], "user": each_both_dict.schema["user"], "user_accession": each_both_dict.schema["user_accession"]}
+                each_dict = {"accession": each_both_dict.schema.get("accession"), "user": each_both_dict.schema.get("user"), "user_accession": each_both_dict.schema.get("user_accession")}
                 for name, link_to_dict in each_both_dict.relationships.items():
                     for link_to, acc_list in link_to_dict.items():
                         for acc in acc_list:

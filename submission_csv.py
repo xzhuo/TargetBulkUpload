@@ -107,7 +107,7 @@ def main():
 
     reader = sheetreader.SheetReader(meta_structure)
     db_poster = poster.Poster(args.token, '', is_update, is_production, meta_structure)
-
+    user = db_poster.user_name
     workbook = xlrd.open_workbook(args.excel)
     book_data = bookdata.BookData(meta_structure)
     sheet_names = workbook.sheet_names()
@@ -124,6 +124,8 @@ def main():
             validation = False
         try:
             data_validator.duplication_check(db_poster, sheet_data)
+            for x in sheet_data.all_records:
+                x.schema["user"] = user
             book_data.add_sheet(sheet_data)
         except validator.ValidatorError as validator_error:
             logging.error(validator_error)
